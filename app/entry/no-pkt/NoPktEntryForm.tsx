@@ -10,7 +10,7 @@ interface RowResult {
   valid: boolean;
 }
 
-export default function NoPktEntryForm() {
+export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
   const [gemstones, setGemstones] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
 
@@ -102,6 +102,7 @@ export default function NoPktEntryForm() {
       if (data.submitted > 0) {
         setSubmittedCount(data.submitted);
         setEntryNumbers([""]);
+        onSaved?.();
       }
     } finally {
       setSubmitting(false);

@@ -18,7 +18,7 @@ export default function Navbar() {
   const role = (session?.user as any)?.role;
 
   return (
-    <header className="border-b border-line bg-surface">
+    <header className="sticky top-0 z-40 border-b border-line bg-surface">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-center gap-4 sm:gap-8">
           <nav className="flex items-center gap-3 sm:gap-6 flex-wrap">
@@ -44,7 +44,7 @@ export default function Navbar() {
                   pathname?.startsWith("/dashboard/admin") ? "text-ink font-medium" : "text-slate hover:text-ink"
                 }`}
               >
-                Admin
+                Report
               </Link>
             )}
           </nav>

@@ -9,7 +9,7 @@ interface RowResult {
   valid: boolean;
 }
 
-export default function NormalEntryForm() {
+export default function NormalEntryForm({ onSaved }: { onSaved?: () => void }) {
   const [gemstones, setGemstones] = useState<string[]>([]);
   const [packetNo, setPacketNo] = useState("");
   const [gemstone, setGemstone] = useState("");
@@ -100,6 +100,7 @@ export default function NormalEntryForm() {
       if (data.submitted > 0) {
         setSubmittedCount(data.submitted);
         setEntryNumbers([""]);
+        onSaved?.();
       }
     } finally {
       setSubmitting(false);

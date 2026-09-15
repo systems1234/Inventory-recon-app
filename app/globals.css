@@ -47,6 +47,6 @@
   }
 
   .card {
-    @apply bg-surface border border-line rounded-md;
+    @apply bg-surface border border-line rounded-md shadow-sm;
   }
 }

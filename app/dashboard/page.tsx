@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
@@ -11,24 +11,60 @@ interface Summary {
   noPktCount: number;
 }
 
+/** Last 12 months (including current) as YYYY-MM-01 values, newest first. */
+function recentMonths(): { value: string; label: string }[] {
+  const months: { value: string; label: string }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    months.push({
+      value: `${y}-${m}-01`,
+      label: d.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })
+    });
+  }
+  return months;
+}
+
 export default function DashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const months = useMemo(recentMonths, []);
 
   useEffect(() => {
-    fetch("/api/summary")
+    const url = selectedMonth ? `/api/summary?month=${selectedMonth}` : "/api/summary";
+    setSummary(null);
+    fetch(url)
       .then((r) => r.json())
-      .then(setSummary);
-  }, []);
+      .then((data) => {
+        setSummary(data);
+        if (!selectedMonth) setSelectedMonth(data.reconMonth);
+      });
+  }, [selectedMonth]);
 
   const monthLabel = summary
-    ? new Date(summary.reconMonth).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    ? new Date(summary.reconMonth).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })
     : "";
 
   return (
     <main>
       <Navbar />
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <p className="text-slate text-sm mb-2">{monthLabel || "This month"}</p>
+        <div className="flex items-center justify-between gap-4 mb-2 flex-wrap">
+          <p className="text-slate text-sm">{monthLabel || "This month"}</p>
+          <select
+            className="field-input w-auto py-1.5 text-sm"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+          >
+            {months.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <h1 className="font-display font-semibold text-3xl text-ink mb-10">Your reconciliation progress</h1>
 
         <div className="grid grid-cols-3 gap-4 mb-10">

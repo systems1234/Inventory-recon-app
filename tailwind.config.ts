@@ -6,15 +6,15 @@ const config: Config = {
     extend: {
       colors: {
         // base
-        paper: "#F5F8FC",     // page background — cool, easy on the eyes for long entry sessions
+        paper: "#F7F6F2",     // page background — warm neutral, matches the reference design
         surface: "#FFFFFF",   // cards, inputs
         ink: "#1B2733",       // primary text
         slate: "#64748B",     // secondary/muted text
         line: "#DDE4ED",      // borders/dividers
 
         // section accents — one hue per form, used for wayfinding
-        sapphire: "#2657A6",
-        "sapphire-dark": "#1D4680",
+        sapphire: "#2F6F66",       // primary brand accent (teal, per reference design)
+        "sapphire-dark": "#234F49",
         topaz: "#B87A1A",
         "topaz-dark": "#96630F",
         amethyst: "#6B4C9A",
@@ -33,9 +33,9 @@ const config: Config = {
         mono: ["var(--font-plex-mono)", "monospace"]
       },
       borderRadius: {
-        sm: "3px",
-        DEFAULT: "5px",
-        md: "6px"
+        sm: "6px",
+        DEFAULT: "8px",
+        md: "14px"
       }
     }
   },

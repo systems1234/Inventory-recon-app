@@ -1,17 +1,41 @@
+"use client";
+
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import NormalEntryForm from "./NormalEntryForm";
+import RecentEntriesPanel from "@/components/RecentEntriesPanel";
 
 export default function NormalEntryPage() {
+  const [refreshKey, setRefreshKey] = useState(0);
+
   return (
     <main>
       <Navbar />
-      <div className="max-w-2xl mx-auto px-6 py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="flex items-center gap-2.5 mb-3">
           <span className="w-2 h-2 rounded-full bg-sapphire" />
           <span className="text-sapphire text-sm font-medium">Packet-level reconciliation</span>
         </div>
-        <h1 className="font-display font-semibold text-3xl text-ink mb-10">Normal Entry</h1>
-        <NormalEntryForm />
+        <h1 className="font-display font-semibold text-3xl text-ink mb-8 sm:mb-10">Normal Entry</h1>
+
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-10">
+          <div className="lg:max-w-lg w-full">
+            <NormalEntryForm onSaved={() => setRefreshKey((k) => k + 1)} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <RecentEntriesPanel
+              title="Your recent normal entries"
+              fetchUrl="/api/entries/normal/recent"
+              refreshKey={refreshKey}
+              columns={[
+                { key: "entry_number", label: "Entry No." },
+                { key: "packet_no", label: "Packet No." },
+                { key: "gemstone", label: "Gemstone" },
+                { key: "submitted_at", label: "Submitted" }
+              ]}
+            />
+          </div>
+        </div>
       </div>
     </main>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import SearchableSelect from "@/components/SearchableSelect";
 
-export default function LotEntryForm() {
+export default function LotEntryForm({ onSaved }: { onSaved?: () => void }) {
   const [gemstones, setGemstones] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
 
@@ -54,6 +54,7 @@ export default function LotEntryForm() {
       } else {
         setMessage({ type: "success", text: `Lot ${lotNo} recorded.` });
         resetForm();
+        onSaved?.();
       }
     } finally {
       setSubmitting(false);
