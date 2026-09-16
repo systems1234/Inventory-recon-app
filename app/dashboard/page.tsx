@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { recentMonths } from "@/lib/months";
 
 interface Summary {
   reconMonth: string;
@@ -11,26 +12,10 @@ interface Summary {
   noPktCount: number;
 }
 
-/** Last 12 months (including current) as YYYY-MM-01 values, newest first. */
-function recentMonths(): { value: string; label: string }[] {
-  const months: { value: string; label: string }[] = [];
-  const now = new Date();
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-    months.push({
-      value: `${y}-${m}-01`,
-      label: d.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })
-    });
-  }
-  return months;
-}
-
 export default function DashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [selectedMonth, setSelectedMonth] = useState("");
-  const months = useMemo(recentMonths, []);
+  const months = useMemo(() => recentMonths(), []);
 
   useEffect(() => {
     const url = selectedMonth ? `/api/summary?month=${selectedMonth}` : "/api/summary";

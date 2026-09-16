@@ -19,16 +19,16 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-y-2">
-        <div className="flex items-center gap-4 sm:gap-8">
-          <nav className="flex items-center gap-3 sm:gap-6 flex-wrap">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex flex-wrap items-center justify-between gap-y-2">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <nav className="flex items-center gap-2.5 sm:gap-4 flex-wrap">
             {links.map((l) => {
               const active = pathname === l.href;
               return (
                 <Link
                   key={l.href}
                   href={l.href}
-                  className={`flex items-center gap-1.5 text-sm transition-colors ${
+                  className={`flex items-center gap-1 text-sm transition-colors ${
                     active ? "text-ink font-medium" : "text-slate hover:text-ink"
                   }`}
                 >
@@ -49,7 +49,7 @@ export default function Navbar() {
             )}
           </nav>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span className="text-slate text-sm font-mono">{session?.user?.name}</span>
           <button onClick={() => signOut({ callbackUrl: "/login" })} className="btn-danger">
             Sign out

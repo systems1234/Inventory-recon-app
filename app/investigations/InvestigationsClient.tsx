@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 interface Investigation {
   id: string;
   display_name: string;
+  description: string | null;
   group_number: string;
   admin_only: boolean;
   sort_order: number;
@@ -501,9 +502,14 @@ export default function InvestigationsClient() {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-              <h2 className="font-display font-semibold text-lg sm:text-xl text-ink">
-                {selectedInvestigation?.display_name ?? ""}
-              </h2>
+              <div>
+                <h2 className="font-display font-semibold text-lg sm:text-xl text-ink">
+                  {selectedInvestigation?.display_name ?? ""}
+                </h2>
+                {selectedInvestigation?.description && (
+                  <p className="text-slate text-sm mt-0.5 max-w-2xl">{selectedInvestigation.description}</p>
+                )}
+              </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {canRunSelected && selectedId && (
                   <button

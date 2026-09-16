@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getBigQuery, table, currentReconMonth } from "@/lib/bigquery";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role;
   if (!session || role !== "admin") {
@@ -11,7 +11,8 @@ export async function GET() {
   }
 
   const bq = getBigQuery();
-  const reconMonth = currentReconMonth();
+  const requestedMonth = req.nextUrl.searchParams.get("month");
+  const reconMonth = requestedMonth && /^\d{4}-\d{2}-01$/.test(requestedMonth) ? requestedMonth : currentReconMonth();
 
   const query = `
     SELECT

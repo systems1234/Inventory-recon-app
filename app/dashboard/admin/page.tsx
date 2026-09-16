@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
+import { recentMonths } from "@/lib/months";
 
 interface Member {
   user_id: string;
@@ -14,25 +15,41 @@ interface Member {
 export default function AdminDashboardPage() {
   const [members, setMembers] = useState<Member[] | null>(null);
   const [reconMonth, setReconMonth] = useState("");
+  const months = useMemo(() => recentMonths(), []);
 
   useEffect(() => {
-    fetch("/api/summary/admin")
+    const url = reconMonth ? `/api/summary/admin?month=${reconMonth}` : "/api/summary/admin";
+    setMembers(null);
+    fetch(url)
       .then((r) => r.json())
       .then((data) => {
         setMembers(data.members ?? []);
-        setReconMonth(data.reconMonth ?? "");
+        if (!reconMonth) setReconMonth(data.reconMonth ?? "");
       });
-  }, []);
+  }, [reconMonth]);
 
   const monthLabel = reconMonth
-    ? new Date(reconMonth).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    ? new Date(reconMonth).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })
     : "";
 
   return (
     <main>
       <Navbar />
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <p className="text-slate text-sm mb-2">{monthLabel || "This month"}</p>
+        <div className="flex items-center justify-between gap-4 mb-2 flex-wrap">
+          <p className="text-slate text-sm">{monthLabel || "This month"}</p>
+          <select
+            className="field-input w-auto py-1.5 text-sm"
+            value={reconMonth}
+            onChange={(e) => setReconMonth(e.target.value)}
+          >
+            {months.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <h1 className="font-display font-semibold text-3xl text-ink mb-10">Team progress</h1>
 
         <div className="card overflow-hidden">

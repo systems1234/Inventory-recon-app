@@ -4,6 +4,7 @@ import { getBigQuery, table, dataset } from "./bigquery";
 export interface Investigation {
   id: string;
   display_name: string;
+  description: string | null;
   view_name: string;
   table_name: string;
   group_number: string;
@@ -50,7 +51,7 @@ export async function listInvestigations(role: string, email?: string): Promise<
   const bq = getBigQuery();
   const [rows] = await bq.query({
     query: `
-      SELECT id, display_name, view_name, table_name, group_number, admin_only, is_active, sort_order,
+      SELECT id, display_name, description, view_name, table_name, group_number, admin_only, is_active, sort_order,
              key_columns, filter_columns, assigned_emails
       FROM ${table("investigations")}
       WHERE is_active = TRUE
