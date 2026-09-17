@@ -31,7 +31,7 @@ function LoginContent() {
           <span className="w-2.5 h-2.5 rounded-full bg-amethyst" />
         </div>
         <h1 className="font-display font-semibold text-4xl text-ink mb-3">
-          Reconciliation Register
+          Investigation & Reconcillation System
         </h1>
         <p className="text-slate text-sm mb-10 leading-relaxed">
           Sign in with the Google account your admin registered for you to
