@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import LotEntryForm from "./LotEntryForm";
 import SlideOver from "@/components/SlideOver";
 import EntriesTable from "@/components/EntriesTable";
+import MultiSelect from "@/components/MultiSelect";
 import { recentMonths } from "@/lib/months";
 
 interface Entry {
@@ -29,9 +30,20 @@ export default function LotEntryPage() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
 
-  const [gemstoneFilter, setGemstoneFilter] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
+  const [gemstoneOptions, setGemstoneOptions] = useState<string[]>([]);
+  const [locationOptions, setLocationOptions] = useState<string[]>([]);
+  const [gemstoneFilter, setGemstoneFilter] = useState<string[]>([]);
+  const [locationFilter, setLocationFilter] = useState<string[]>([]);
   const [lotNoFilter, setLotNoFilter] = useState("");
+
+  useEffect(() => {
+    fetch("/api/criteria")
+      .then((r) => r.json())
+      .then((data) => {
+        setGemstoneOptions(data.gemstones ?? []);
+        setLocationOptions(data.locations ?? []);
+      });
+  }, []);
 
   function load(m?: string) {
     setLoading(true);
@@ -57,8 +69,8 @@ export default function LotEntryPage() {
 
   const filtered = useMemo(() => {
     return entries.filter((e) => {
-      if (gemstoneFilter && !e.gemstone?.toLowerCase().includes(gemstoneFilter.toLowerCase())) return false;
-      if (locationFilter && !e.location?.toLowerCase().includes(locationFilter.toLowerCase())) return false;
+      if (gemstoneFilter.length > 0 && !gemstoneFilter.includes(e.gemstone)) return false;
+      if (locationFilter.length > 0 && !locationFilter.includes(e.location)) return false;
       if (lotNoFilter && !e.lot_no?.toLowerCase().includes(lotNoFilter.toLowerCase())) return false;
       return true;
     });
@@ -75,7 +87,7 @@ export default function LotEntryPage() {
   ];
 
   return (
-    <main className="min-h-screen flex flex-col">
+    <main className="h-screen flex flex-col overflow-hidden">
       <Navbar />
       <div className="flex-1 min-h-0 flex flex-col px-4 sm:px-6 py-4 max-w-[1600px] w-full mx-auto">
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap shrink-0">
@@ -87,20 +99,8 @@ export default function LotEntryPage() {
                 </option>
               ))}
             </select>
-            <input
-              type="text"
-              placeholder="Filter gemstone"
-              className="field-input w-40 py-1.5 text-sm"
-              value={gemstoneFilter}
-              onChange={(e) => setGemstoneFilter(e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Filter location"
-              className="field-input w-40 py-1.5 text-sm"
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-            />
+            <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
+            <MultiSelect label="Location" options={locationOptions} selected={locationFilter} onChange={setLocationFilter} />
             <input
               type="text"
               placeholder="Filter lot no."
@@ -119,7 +119,7 @@ export default function LotEntryPage() {
             rows={filtered}
             columns={columns}
             loading={loading}
-            resetSignal={`${month}|${gemstoneFilter}|${locationFilter}|${lotNoFilter}`}
+            resetSignal={`${month}|${gemstoneFilter.join(",")}|${locationFilter.join(",")}|${lotNoFilter}`}
           />
         </div>
       </div>

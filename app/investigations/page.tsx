@@ -3,10 +3,9 @@ import InvestigationsClient from "./InvestigationsClient";
 
 export default function InvestigationsPage() {
   return (
-    <main>
+    <main className="h-screen flex flex-col overflow-hidden">
       <Navbar />
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-5 sm:py-6">
-        {/* <h1 className="font-display font-semibold text-2xl sm:text-3xl text-ink mb-4 sm:mb-5">Investigations</h1> */}
+      <div className="flex-1 min-h-0 max-w-[1600px] mx-auto px-4 sm:px-6 py-4 w-full flex flex-col overflow-hidden">
         <InvestigationsClient />
       </div>
     </main>

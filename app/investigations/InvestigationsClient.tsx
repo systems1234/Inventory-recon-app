@@ -408,10 +408,10 @@ export default function InvestigationsClient() {
   }
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       {runMessage && (
         <div
-          className={`card p-3 mb-4 ${
+          className={`card p-3 mb-4 shrink-0 ${
             runMessage.type === "error" ? "bg-ruby-light border-ruby/30" : "bg-emerald-light border-emerald/30"
           }`}
         >
@@ -420,15 +420,15 @@ export default function InvestigationsClient() {
       )}
 
       {weeks.length === 0 ? (
-        <div className="card p-8 text-center text-slate">
+        <div className="card p-8 text-center text-slate shrink-0">
           <p className="mb-3">No investigations have been run yet.</p>
           <button onClick={handleRun} disabled={running} className="btn-primary">
             {running ? "Running…" : "Run Now"}
           </button>
         </div>
       ) : (
-        <div className="flex flex-col md:flex-row gap-0 md:gap-4">
-          <div className="flex md:flex-col items-center md:items-stretch gap-2 md:gap-0 mb-2 md:mb-0">
+        <div className="flex flex-col md:flex-row gap-0 md:gap-4 flex-1 min-h-0">
+          <div className="flex md:flex-col items-center md:items-stretch gap-2 md:gap-0 mb-2 md:mb-0 shrink-0">
             <button
               onClick={() => setSidebarOpen((o) => !o)}
               title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
@@ -439,7 +439,7 @@ export default function InvestigationsClient() {
           </div>
 
           {sidebarOpen && (
-            <aside className="w-full md:w-56 shrink-0 mb-4 md:mb-0">
+            <aside className="w-full md:w-56 shrink-0 mb-4 md:mb-0 overflow-y-auto">
               <p className="text-ink font-medium text-sm mb-2">Run this week's investigations</p>
               <button onClick={handleRun} disabled={running} className="btn-primary w-full mb-4">
                 {running ? "Running…" : "Run Now"}
@@ -500,8 +500,8 @@ export default function InvestigationsClient() {
             </aside>
           )}
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+            <div className="flex items-center justify-between gap-3 mb-3 flex-wrap shrink-0">
               <div>
                 <h2 className="font-display font-semibold text-lg sm:text-xl text-ink">
                   {selectedInvestigation?.display_name ?? ""}
@@ -538,7 +538,7 @@ export default function InvestigationsClient() {
             </div>
 
             {selectedInvestigation && keyColumns.length === 0 && (
-              <div className="card p-3 mb-4 bg-ruby-light border-ruby/30">
+              <div className="card p-3 mb-4 bg-ruby-light border-ruby/30 shrink-0">
                 <p className="text-ruby text-sm">
                   No key columns configured for this investigation — Save, Import, and Run are disabled until an
                   admin sets `key_columns` in the investigations config table.
@@ -547,7 +547,7 @@ export default function InvestigationsClient() {
             )}
 
             {importResult && (
-              <div className="card p-3 mb-4 bg-emerald-light border-emerald/30">
+              <div className="card p-3 mb-4 bg-emerald-light border-emerald/30 shrink-0">
                 <p className="text-emerald text-sm">
                   {importResult.matched} row(s) updated
                   {importResult.unmatched > 0 ? `, ${importResult.unmatched} row(s) had no matching record` : ""}.
@@ -556,7 +556,7 @@ export default function InvestigationsClient() {
             )}
 
             {filterColumns.length > 0 && rows.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-2 mb-4 shrink-0">
                 {filterColumns.map((col) => (
                   <input
                     key={col}
@@ -577,8 +577,8 @@ export default function InvestigationsClient() {
             ) : filteredRows.length === 0 ? (
               <div className="card p-8 text-center text-slate">No rows match the current filters.</div>
             ) : (
-              <>
-                <div className="card overflow-auto max-h-[65vh] -webkit-overflow-scrolling-touch">
+              <div className="flex-1 min-h-0 flex flex-col">
+                <div className="card overflow-auto flex-1 min-h-0 -webkit-overflow-scrolling-touch">
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-paper z-10">
                       <tr className="border-b border-line text-left">
@@ -670,7 +670,7 @@ export default function InvestigationsClient() {
                   </table>
                 </div>
 
-                <div className="flex items-center justify-between mt-4 text-sm text-slate flex-wrap gap-2">
+                <div className="flex items-center justify-between mt-4 text-sm text-slate flex-wrap gap-2 shrink-0">
                   <span>
                     Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredRows.length)} of{" "}
                     {filteredRows.length}
@@ -695,7 +695,7 @@ export default function InvestigationsClient() {
                     </button>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

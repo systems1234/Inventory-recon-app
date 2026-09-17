@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import NormalEntryForm from "./NormalEntryForm";
 import SlideOver from "@/components/SlideOver";
 import EntriesTable from "@/components/EntriesTable";
+import MultiSelect from "@/components/MultiSelect";
 import { recentMonths } from "@/lib/months";
 import { unwrap } from "@/lib/format";
 
@@ -28,9 +29,16 @@ export default function NormalEntryPage() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
 
+  const [gemstoneOptions, setGemstoneOptions] = useState<string[]>([]);
   const [dateFilter, setDateFilter] = useState("");
-  const [gemstoneFilter, setGemstoneFilter] = useState("");
+  const [gemstoneFilter, setGemstoneFilter] = useState<string[]>([]);
   const [entryNoFilter, setEntryNoFilter] = useState("");
+
+  useEffect(() => {
+    fetch("/api/criteria")
+      .then((r) => r.json())
+      .then((data) => setGemstoneOptions(data.gemstones ?? []));
+  }, []);
 
   function load(m?: string) {
     setLoading(true);
@@ -57,7 +65,7 @@ export default function NormalEntryPage() {
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       if (dateFilter && !unwrap(e.submitted_at).startsWith(dateFilter)) return false;
-      if (gemstoneFilter && !e.gemstone?.toLowerCase().includes(gemstoneFilter.toLowerCase())) return false;
+      if (gemstoneFilter.length > 0 && !gemstoneFilter.includes(e.gemstone)) return false;
       if (entryNoFilter && !e.entry_number?.toLowerCase().includes(entryNoFilter.toLowerCase())) return false;
       return true;
     });
@@ -72,7 +80,7 @@ export default function NormalEntryPage() {
   ];
 
   return (
-    <main className="min-h-screen flex flex-col">
+    <main className="h-screen flex flex-col overflow-hidden">
       <Navbar />
       <div className="flex-1 min-h-0 flex flex-col px-4 sm:px-6 py-4 max-w-[1600px] w-full mx-auto">
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap shrink-0">
@@ -91,13 +99,7 @@ export default function NormalEntryPage() {
               onChange={(e) => setDateFilter(e.target.value)}
               title="Filter by submitted date"
             />
-            <input
-              type="text"
-              placeholder="Filter gemstone"
-              className="field-input w-40 py-1.5 text-sm"
-              value={gemstoneFilter}
-              onChange={(e) => setGemstoneFilter(e.target.value)}
-            />
+            <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
             <input
               type="text"
               placeholder="Filter entry no."
@@ -116,7 +118,7 @@ export default function NormalEntryPage() {
             rows={filtered}
             columns={columns}
             loading={loading}
-            resetSignal={`${month}|${dateFilter}|${gemstoneFilter}|${entryNoFilter}`}
+            resetSignal={`${month}|${dateFilter}|${gemstoneFilter.join(",")}|${entryNoFilter}`}
           />
         </div>
       </div>
