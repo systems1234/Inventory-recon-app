@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import Navbar from "@/components/Navbar";
+import AppShell from "@/components/AppShell";
 import LotEntryForm from "./LotEntryForm";
 import SlideOver from "@/components/SlideOver";
 import EntriesTable from "@/components/EntriesTable";
@@ -87,41 +87,40 @@ export default function LotEntryPage() {
   ];
 
   return (
-    <main className="h-screen flex flex-col overflow-hidden">
-      <Navbar />
-      <div className="flex-1 min-h-0 flex flex-col px-4 sm:px-6 py-4 max-w-[1600px] w-full mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap shrink-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <select className="field-input w-auto py-1.5 text-sm" value={month} onChange={(e) => setMonth(e.target.value)}>
-              {months.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-            <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
-            <MultiSelect label="Location" options={locationOptions} selected={locationFilter} onChange={setLocationFilter} />
-            <input
-              type="text"
-              placeholder="Filter lot no."
-              className="field-input w-40 py-1.5 text-sm"
-              value={lotNoFilter}
-              onChange={(e) => setLotNoFilter(e.target.value)}
-            />
-          </div>
+    <AppShell
+      pageTitle="Lot Entry"
+      pageEyebrow="Batch-level reconciliation"
+      topbarActions={
+        <>
+          <select className="filter-select" value={month} onChange={(e) => setMonth(e.target.value)}>
+            {months.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
+          <MultiSelect label="Location" options={locationOptions} selected={locationFilter} onChange={setLocationFilter} />
+          <input
+            type="text"
+            placeholder="Filter lot no."
+            className="filter-search"
+            value={lotNoFilter}
+            onChange={(e) => setLotNoFilter(e.target.value)}
+          />
           <button onClick={() => setFormOpen(true)} className="btn-primary whitespace-nowrap">
             + New
           </button>
-        </div>
-
-        <div className="flex-1 min-h-0">
-          <EntriesTable
-            rows={filtered}
-            columns={columns}
-            loading={loading}
-            resetSignal={`${month}|${gemstoneFilter.join(",")}|${locationFilter.join(",")}|${lotNoFilter}`}
-          />
-        </div>
+        </>
+      }
+    >
+      <div className="h-full flex flex-col overflow-hidden">
+        <EntriesTable
+          rows={filtered}
+          columns={columns}
+          loading={loading}
+          resetSignal={`${month}|${gemstoneFilter.join(",")}|${locationFilter.join(",")}|${lotNoFilter}`}
+        />
       </div>
 
       <SlideOver open={formOpen} onClose={() => setFormOpen(false)} title="New Lot Entry">
@@ -132,6 +131,6 @@ export default function LotEntryPage() {
           }}
         />
       </SlideOver>
-    </main>
+    </AppShell>
   );
 }

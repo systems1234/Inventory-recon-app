@@ -37,52 +37,34 @@ export default function MultiSelect({ label, options, selected, onChange, placeh
     else onChange([...selected, opt]);
   }
 
+  const summary = selected.length === 0 ? `${label}: All` : selected.length === 1 ? selected[0] : `${label} (${selected.length})`;
+
   return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="field-input flex items-center justify-between gap-2 text-left w-44 py-1.5 text-sm"
-      >
-        <span className="truncate">{selected.length === 0 ? label : `${label} (${selected.length})`}</span>
-        <span className="text-slate text-xs shrink-0">▾</span>
+    <div ref={containerRef} style={{ position: "relative", display: "inline-block" }}>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen((o) => !o)}>
+        {summary}
       </button>
       {open && (
-        <div className="absolute z-30 mt-1 w-60 card shadow-lg">
-          <div className="p-2 border-b border-line">
-            <input
-              autoFocus
-              type="text"
-              placeholder={placeholder}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="field-input py-1.5 text-sm w-full"
-            />
-          </div>
-          <div className="max-h-56 overflow-auto py-1">
-            {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-slate text-sm">No matches</p>
-            ) : (
-              filtered.map((opt) => (
-                <label key={opt} className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-paper cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(opt)}
-                    onChange={() => toggle(opt)}
-                    className="accent-sapphire"
-                  />
-                  <span className="text-ink truncate">{opt}</span>
-                </label>
-              ))
-            )}
-          </div>
-          {selected.length > 0 && (
-            <div className="border-t border-line p-2">
-              <button type="button" onClick={() => onChange([])} className="text-xs text-slate hover:text-ink">
-                Clear selection
-              </button>
-            </div>
+        <div className="colpick-pop ms-pop long" style={{ position: "absolute", top: 34, zIndex: 30 }}>
+          <input
+            autoFocus
+            type="text"
+            placeholder={placeholder}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="colpick-search"
+          />
+          {filtered.length === 0 ? (
+            <p style={{ fontSize: 12, color: "var(--g-500)", padding: "6px 0" }}>No matches</p>
+          ) : (
+            filtered.map((opt) => (
+              <label key={opt}>
+                <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggle(opt)} />
+                {opt}
+              </label>
+            ))
           )}
+          {selected.length > 0 && <div className="ms-clear" onClick={() => onChange([])}>Clear</div>}
         </div>
       )}
     </div>

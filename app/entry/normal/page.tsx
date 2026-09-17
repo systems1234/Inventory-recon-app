@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import Navbar from "@/components/Navbar";
+import AppShell from "@/components/AppShell";
 import NormalEntryForm from "./NormalEntryForm";
 import SlideOver from "@/components/SlideOver";
 import EntriesTable from "@/components/EntriesTable";
@@ -80,47 +80,46 @@ export default function NormalEntryPage() {
   ];
 
   return (
-    <main className="h-screen flex flex-col overflow-hidden">
-      <Navbar />
-      <div className="flex-1 min-h-0 flex flex-col px-4 sm:px-6 py-4 max-w-[1600px] w-full mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap shrink-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <select className="field-input w-auto py-1.5 text-sm" value={month} onChange={(e) => setMonth(e.target.value)}>
-              {months.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-            <input
-              type="date"
-              className="field-input w-auto py-1.5 text-sm"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              title="Filter by submitted date"
-            />
-            <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
-            <input
-              type="text"
-              placeholder="Filter entry no."
-              className="field-input w-40 py-1.5 text-sm"
-              value={entryNoFilter}
-              onChange={(e) => setEntryNoFilter(e.target.value)}
-            />
-          </div>
+    <AppShell
+      pageTitle="Normal Entry"
+      pageEyebrow="Packet-level reconciliation"
+      topbarActions={
+        <>
+          <select className="filter-select" value={month} onChange={(e) => setMonth(e.target.value)}>
+            {months.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            className="filter-select"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            title="Filter by submitted date"
+          />
+          <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
+          <input
+            type="text"
+            placeholder="Filter entry no."
+            className="filter-search"
+            value={entryNoFilter}
+            onChange={(e) => setEntryNoFilter(e.target.value)}
+          />
           <button onClick={() => setFormOpen(true)} className="btn-primary whitespace-nowrap">
             + New
           </button>
-        </div>
-
-        <div className="flex-1 min-h-0">
-          <EntriesTable
-            rows={filtered}
-            columns={columns}
-            loading={loading}
-            resetSignal={`${month}|${dateFilter}|${gemstoneFilter.join(",")}|${entryNoFilter}`}
-          />
-        </div>
+        </>
+      }
+    >
+      <div className="h-full flex flex-col overflow-hidden">
+        <EntriesTable
+          rows={filtered}
+          columns={columns}
+          loading={loading}
+          resetSignal={`${month}|${dateFilter}|${gemstoneFilter.join(",")}|${entryNoFilter}`}
+        />
       </div>
 
       <SlideOver open={formOpen} onClose={() => setFormOpen(false)} title="New Normal Entry">
@@ -131,6 +130,6 @@ export default function NormalEntryPage() {
           }}
         />
       </SlideOver>
-    </main>
+    </AppShell>
   );
 }

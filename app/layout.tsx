@@ -1,24 +1,18 @@
 import type { Metadata } from "next";
-import { Fraunces, Manrope, IBM_Plex_Mono } from "next/font/google";
+import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  weight: ["500", "600"],
-  variable: "--font-fraunces"
-});
-
-const manrope = Manrope({
+const hankenGrotesk = Hanken_Grotesk({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-manrope"
+  variable: "--font-hanken"
 });
 
-const plexMono = IBM_Plex_Mono({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-plex-mono"
+  weight: ["400", "500", "600"],
+  variable: "--font-jetbrains"
 });
 
 export const metadata: Metadata = {
@@ -28,7 +22,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${manrope.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${hankenGrotesk.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-paper text-ink font-sans min-h-screen">
         <Providers>{children}</Providers>
       </body>

@@ -83,7 +83,15 @@ export default function SearchableSelect({ value, onChange, options, placeholder
         onKeyDown={handleKeyDown}
       />
       {open && (
-        <ul className="absolute z-30 mt-1 w-full max-h-56 overflow-auto card shadow-lg text-sm">
+        <ul
+          className="absolute z-30 mt-1 w-full max-h-56 overflow-auto text-sm"
+          style={{
+            background: "var(--g-0)",
+            border: "1px solid var(--g-200)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--shadow-md)"
+          }}
+        >
           {filtered.length === 0 ? (
             <li className="px-3 py-2 text-slate">No matches</li>
           ) : (

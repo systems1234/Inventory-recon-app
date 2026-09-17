@@ -503,7 +503,7 @@ export default function InvestigationsClient() {
           <div className="flex-1 min-w-0 min-h-0 flex flex-col">
             <div className="flex items-center justify-between gap-3 mb-3 flex-wrap shrink-0">
               <div>
-                <h2 className="font-display font-semibold text-lg sm:text-xl text-ink">
+                <h2 className="font-sans font-bold text-lg sm:text-xl text-ink">
                   {selectedInvestigation?.display_name ?? ""}
                 </h2>
                 {selectedInvestigation?.description && (
@@ -564,7 +564,7 @@ export default function InvestigationsClient() {
                     placeholder={`Filter ${col}`}
                     value={filters[col] ?? ""}
                     onChange={(e) => handleFilterChange(col, e.target.value)}
-                    className="field-input w-full sm:w-48"
+                    className="filter-search w-full sm:w-48"
                   />
                 ))}
               </div>
@@ -578,25 +578,20 @@ export default function InvestigationsClient() {
               <div className="card p-8 text-center text-slate">No rows match the current filters.</div>
             ) : (
               <div className="flex-1 min-h-0 flex flex-col">
-                <div className="card overflow-auto flex-1 min-h-0 -webkit-overflow-scrolling-touch">
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-paper z-10">
-                      <tr className="border-b border-line text-left">
+                <div className="card table-scroll flex-1 min-h-0">
+                  <table className="cl-table">
+                    <thead>
+                      <tr>
                         {dataColumns.map((col, i) => (
-                          <th
-                            key={col}
-                            className={`field-label px-4 py-3 mb-0 whitespace-nowrap ${
-                              i === 0 ? "sticky left-0 bg-paper z-20" : ""
-                            }`}
-                          >
+                          <th key={col} className={i === 0 ? "sticky left-0 bg-surface z-20" : ""}>
                             {col}
                           </th>
                         ))}
-                        <th className="field-label px-4 py-3 mb-0 whitespace-nowrap">Solved Date</th>
-                        <th className="field-label px-4 py-3 mb-0 whitespace-nowrap">Action</th>
-                        <th className="field-label px-4 py-3 mb-0 whitespace-nowrap">Reason</th>
-                        <th className="field-label px-4 py-3 mb-0 whitespace-nowrap">Comment</th>
-                        <th className="field-label px-4 py-3 mb-0 whitespace-nowrap"></th>
+                        <th>Solved Date</th>
+                        <th>Action</th>
+                        <th>Reason</th>
+                        <th>Comment</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -605,23 +600,21 @@ export default function InvestigationsClient() {
                         const hasEdit = !!edits[key];
                         const isSaving = savingKey === key;
                         return (
-                          <tr key={key || i} className="border-b border-line last:border-0 align-top">
+                          <tr key={key || i} style={{ verticalAlign: "top" }}>
                             {dataColumns.map((col, ci) => {
                               const raw = unwrap(row[col]);
                               const isLong = raw.length > 60;
                               return (
                                 <td
                                   key={col}
-                                  className={`px-4 py-2.5 text-ink font-mono text-xs max-w-xs truncate ${
-                                    ci === 0 ? "sticky left-0 bg-surface z-[5]" : ""
-                                  }`}
+                                  className={`cell-mono max-w-xs truncate ${ci === 0 ? "sticky left-0 bg-surface z-[5]" : ""}`}
                                   title={isLong ? raw : undefined}
                                 >
                                   {raw}
                                 </td>
                               );
                             })}
-                            <td className="px-2 py-2">
+                            <td>
                               <input
                                 type="date"
                                 value={fieldValue(row, key, "solved_date")}
@@ -629,7 +622,7 @@ export default function InvestigationsClient() {
                                 className="field-input py-1.5 text-xs w-36"
                               />
                             </td>
-                            <td className="px-2 py-2">
+                            <td>
                               <input
                                 type="text"
                                 value={fieldValue(row, key, "action")}
@@ -637,7 +630,7 @@ export default function InvestigationsClient() {
                                 className="field-input py-1.5 text-xs w-32"
                               />
                             </td>
-                            <td className="px-2 py-2">
+                            <td>
                               <input
                                 type="text"
                                 value={fieldValue(row, key, "reason")}
@@ -645,7 +638,7 @@ export default function InvestigationsClient() {
                                 className="field-input py-1.5 text-xs w-36"
                               />
                             </td>
-                            <td className="px-2 py-2">
+                            <td>
                               <input
                                 type="text"
                                 value={fieldValue(row, key, "comment")}
@@ -653,11 +646,11 @@ export default function InvestigationsClient() {
                                 className="field-input py-1.5 text-xs w-36"
                               />
                             </td>
-                            <td className="px-2 py-2">
+                            <td>
                               <button
                                 onClick={() => handleSaveRow(row)}
                                 disabled={!hasEdit || isSaving}
-                                className="btn-primary text-xs px-2.5 py-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="btn-primary btn-sm"
                               >
                                 {isSaving ? "…" : "Save"}
                               </button>
@@ -670,28 +663,24 @@ export default function InvestigationsClient() {
                   </table>
                 </div>
 
-                <div className="flex items-center justify-between mt-4 text-sm text-slate flex-wrap gap-2 shrink-0">
+                <div className="pagination shrink-0">
                   <span>
                     Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredRows.length)} of{" "}
                     {filteredRows.length}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="btn-ghost px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Prev
+                  <div className="page-btns">
+                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="page-btn">
+                      ‹
                     </button>
-                    <span className="px-1">
-                      Page {currentPage} of {totalPages}
+                    <span style={{ padding: "0 8px", display: "flex", alignItems: "center" }}>
+                      {currentPage} / {totalPages}
                     </span>
                     <button
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
-                      className="btn-ghost px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="page-btn"
                     >
-                      Next
+                      ›
                     </button>
                   </div>
                 </div>
