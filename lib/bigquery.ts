@@ -75,6 +75,17 @@ export function inventoryMasterTable(): string {
   return `\`${id}\``;
 }
 
+/**
+ * HR's own employee directory (LifeCycle_FMS.Employee_Data) -- sign-in
+ * access is gated on a row here whose Project_Systems column lists
+ * "inventory_recon", instead of a separate allow-list this app owns.
+ */
+export function employeeTable(): string {
+  const id = process.env.EMPLOYEE_DATA_TABLE_ID;
+  if (!id) throw new Error("EMPLOYEE_DATA_TABLE_ID is not set");
+  return `\`${id}\``;
+}
+
 /** First-of-month DATE string for the current recon period, e.g. "2026-09-01". */
 export function currentReconMonth(): string {
   const now = new Date();

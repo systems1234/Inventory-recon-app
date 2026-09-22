@@ -1,10 +1,3 @@
-export interface AppUser {
-  user_id: string;
-  name: string;
-  role: "member" | "admin";
-  active: boolean;
-}
-
 export interface CriteriaOptions {
   gemstones: string[];
   locations: string[];
