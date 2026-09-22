@@ -86,6 +86,18 @@ export function employeeTable(): string {
   return `\`${id}\``;
 }
 
+/**
+ * IMS_New_Version.Order_In_Out -- one Inventory_ID can have many rows here
+ * (its movement history); only the latest by Timestamp reflects its current
+ * stock status. Entry validation uses this to reject anything currently
+ * "Out of Stock".
+ */
+export function orderInOutTable(): string {
+  const id = process.env.ORDER_IN_OUT_TABLE_ID;
+  if (!id) throw new Error("ORDER_IN_OUT_TABLE_ID is not set");
+  return `\`${id}\``;
+}
+
 /** First-of-month DATE string for the current recon period, e.g. "2026-09-01". */
 export function currentReconMonth(): string {
   const now = new Date();

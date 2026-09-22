@@ -1,4 +1,4 @@
-import { getBigQuery, table, bomTable, inventoryMasterTable } from "./bigquery";
+import { getBigQuery, table, bomTable, inventoryMasterTable, orderInOutTable } from "./bigquery";
 
 export type EntryStatus =
   | "Valid Inventory No"
@@ -8,9 +8,37 @@ export type EntryStatus =
   | "Invalid Inventory No - Not 94 or 800"
   | "Invalid Inventory No - Duplicate"
   | "Invalid Inventory No - Not Found in Inventory Master"
+  | "Invalid Inventory No - Out of Stock"
   | "Invalid Inventory No - Already Present in BOM"
   | "Invalid Inventory No - Already Saved in Database"
   | "Invalid Inventory No - Not Matching Packet No";
+
+/**
+ * Order_In_Out holds one row per movement, so an Inventory_ID can appear
+ * many times -- only the latest row (by Timestamp) reflects current status.
+ * Anything other than "Out of Stock" (WIP, "Instock - Loose", null, or no
+ * row at all) is treated as in-stock; only an exact latest status of
+ * "Out of Stock" disqualifies an ID.
+ */
+async function fetchOutOfStockIds(ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const bq = getBigQuery();
+  const [rows] = await bq.query({
+    query: `
+      SELECT inv_id FROM (
+        SELECT
+          CAST(Inventory_ID AS STRING) AS inv_id,
+          Inventory_Status,
+          ROW_NUMBER() OVER (PARTITION BY Inventory_ID ORDER BY Timestamp DESC) AS rn
+        FROM ${orderInOutTable()}
+        WHERE CAST(Inventory_ID AS STRING) IN UNNEST(@ids)
+      )
+      WHERE rn = 1 AND LOWER(TRIM(Inventory_Status)) = 'out of stock'
+    `,
+    params: { ids }
+  });
+  return new Set(rows.map((r: any) => r.inv_id));
+}
 
 export interface EntryCheckResult {
   entry_number: string;
@@ -76,6 +104,8 @@ export async function validateNormalEntries(
     : [[]];
   const inMaster = new Set(masterRows.map((r: any) => r.inv_id));
 
+  const outOfStock = await fetchOutOfStockIds(nonBlank);
+
   const results: EntryCheckResult[] = [];
 
   for (const raw of entryNumbers) {
@@ -101,6 +131,8 @@ export async function validateNormalEntries(
       status = "Invalid Inventory No - Duplicate";
     } else if (!inMaster.has(id)) {
       status = "Invalid Inventory No - Not Found in Inventory Master";
+    } else if (outOfStock.has(id)) {
+      status = "Invalid Inventory No - Out of Stock";
     } else if (bomMap.has(id) && bomMap.get(id) !== "RTO") {
       status = "Invalid Inventory No - Already Present in BOM";
     } else if (alreadyInDatabase.has(id)) {
@@ -122,7 +154,8 @@ export type NoPktStatus =
   | "Duplicate Entry"
   | "Already entered under a Packet No."
   | "Already saved in database"
-  | "Not Found in Inventory Master";
+  | "Not Found in Inventory Master"
+  | "Out of Stock";
 
 export interface NoPktCheckResult {
   entry_number: string;
@@ -175,6 +208,8 @@ export async function validateNoPktEntries(
     : [[]];
   const inMaster = new Set(masterRows.map((r: any) => r.inv_id));
 
+  const outOfStock = await fetchOutOfStockIds(nonBlank);
+
   const [noPktRows] = nonBlank.length
     ? await bq.query({
         query: `
@@ -205,6 +240,8 @@ export async function validateNoPktEntries(
       results.push({ entry_number: id, status: "Duplicate Entry", valid: false });
     } else if (!inMaster.has(id)) {
       results.push({ entry_number: id, status: "Not Found in Inventory Master", valid: false });
+    } else if (outOfStock.has(id)) {
+      results.push({ entry_number: id, status: "Out of Stock", valid: false });
     } else if (foundUnderPacket.has(id)) {
       results.push({
         entry_number: id,
