@@ -6,7 +6,6 @@ import AppShell from "@/components/AppShell";
 import NormalEntryForm from "./NormalEntryForm";
 import SlideOver from "@/components/SlideOver";
 import EntriesTable from "@/components/EntriesTable";
-import MultiSelect from "@/components/MultiSelect";
 import { recentMonths } from "@/lib/months";
 import { unwrap, downloadCsv } from "@/lib/format";
 
@@ -19,27 +18,19 @@ interface Entry {
   [key: string]: unknown;
 }
 
+/**
+ * Personal view: only the current user's own submissions, no filters beyond
+ * month. The full table with gemstone/date/submitted-by filters lives at
+ * /entry/normal/all.
+ */
 export default function NormalEntryPage() {
   const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === "admin";
   const months = useMemo(() => recentMonths(), []);
 
   const [month, setMonth] = useState("");
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
-
-  const [gemstoneOptions, setGemstoneOptions] = useState<string[]>([]);
-  const [dateFilter, setDateFilter] = useState("");
-  const [gemstoneFilter, setGemstoneFilter] = useState<string[]>([]);
-  const [entryNoFilter, setEntryNoFilter] = useState("");
-  const [submittedByFilter, setSubmittedByFilter] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetch("/api/criteria")
-      .then((r) => r.json())
-      .then((data) => setGemstoneOptions(data.gemstones ?? []));
-  }, []);
 
   function load(m?: string) {
     setLoading(true);
@@ -63,37 +54,26 @@ export default function NormalEntryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
 
-  const submittedByOptions = useMemo(
-    () => Array.from(new Set(entries.map((e) => unwrap(e.submitted_by)).filter(Boolean))).sort(),
-    [entries]
+  const myEntries = useMemo(
+    () => entries.filter((e) => unwrap(e.submitted_by) === session?.user?.email),
+    [entries, session?.user?.email]
   );
-
-  const filtered = useMemo(() => {
-    return entries.filter((e) => {
-      if (dateFilter && !unwrap(e.submitted_at).startsWith(dateFilter)) return false;
-      if (gemstoneFilter.length > 0 && !gemstoneFilter.includes(e.gemstone)) return false;
-      if (entryNoFilter && !e.entry_number?.toLowerCase().includes(entryNoFilter.toLowerCase())) return false;
-      if (submittedByFilter.length > 0 && !submittedByFilter.includes(unwrap(e.submitted_by))) return false;
-      return true;
-    });
-  }, [entries, dateFilter, gemstoneFilter, entryNoFilter, submittedByFilter]);
 
   const columns = [
     { key: "entry_number", label: "Inventory ID" },
     { key: "packet_no", label: "Packet No." },
     { key: "gemstone", label: "Gemstone" },
-    ...(isAdmin ? [{ key: "submitted_by", label: "Submitted By" }] : []),
     { key: "submitted_at", label: "Submitted" }
   ];
 
   function handleExport() {
-    downloadCsv(`for-entry_${month}.csv`, columns, filtered);
+    downloadCsv(`for-entry_${month}.csv`, columns, myEntries);
   }
 
   return (
     <AppShell
       pageTitle="For Entry"
-      pageEyebrow="Packet-level reconciliation"
+      pageEyebrow="Your submissions"
       topbarActions={
         <>
           <select className="filter-select" value={month} onChange={(e) => setMonth(e.target.value)}>
@@ -103,30 +83,7 @@ export default function NormalEntryPage() {
               </option>
             ))}
           </select>
-          <input
-            type="date"
-            className="filter-select"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            title="Filter by submitted date"
-          />
-          <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
-          {isAdmin && (
-            <MultiSelect
-              label="Submitted By"
-              options={submittedByOptions}
-              selected={submittedByFilter}
-              onChange={setSubmittedByFilter}
-            />
-          )}
-          <input
-            type="text"
-            placeholder="Filter inventory ID"
-            className="filter-search"
-            value={entryNoFilter}
-            onChange={(e) => setEntryNoFilter(e.target.value)}
-          />
-          <button onClick={handleExport} disabled={filtered.length === 0} className="btn-secondary btn-sm">
+          <button onClick={handleExport} disabled={myEntries.length === 0} className="btn-secondary btn-sm">
             Export CSV
           </button>
           <button onClick={() => setFormOpen(true)} className="btn-primary whitespace-nowrap">
@@ -136,12 +93,7 @@ export default function NormalEntryPage() {
       }
     >
       <div className="h-full flex flex-col overflow-hidden">
-        <EntriesTable
-          rows={filtered}
-          columns={columns}
-          loading={loading}
-          resetSignal={`${month}|${dateFilter}|${gemstoneFilter.join(",")}|${entryNoFilter}|${submittedByFilter.join(",")}`}
-        />
+        <EntriesTable rows={myEntries} columns={columns} loading={loading} resetSignal={month} />
       </div>
 
       <SlideOver open={formOpen} onClose={() => setFormOpen(false)} title="New For Entry">

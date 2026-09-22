@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import SearchableSelect from "@/components/SearchableSelect";
+import AddOptionButton from "@/components/AddOptionButton";
 
 interface RowResult {
   entry_number: string;
@@ -160,7 +161,18 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
     <div>
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div>
-          <p className="field-label">Location</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="field-label mb-0">Location</p>
+            <AddOptionButton
+              label="Location"
+              endpoint="/api/locations"
+              onAdded={(name) => {
+                setLocations((prev) => [...prev, name].sort());
+                setLocation(name);
+                setResults(null);
+              }}
+            />
+          </div>
           <SearchableSelect
             value={location}
             onChange={(v) => {
@@ -174,7 +186,18 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
           />
         </div>
         <div>
-          <p className="field-label">Gemstone</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="field-label mb-0">Gemstone</p>
+            <AddOptionButton
+              label="Gemstone"
+              endpoint="/api/gemstones"
+              onAdded={(name) => {
+                setGemstones((prev) => [...prev, name].sort());
+                setGemstone(name);
+                setResults(null);
+              }}
+            />
+          </div>
           <SearchableSelect
             value={gemstone}
             onChange={(v) => {
