@@ -22,9 +22,17 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
   const [submittedCount, setSubmittedCount] = useState<number | null>(null);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [errorsOnly, setErrorsOnly] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<(HTMLInputElement | null)[]>([]);
   const focusIndexRef = useRef<number | null>(null);
+  const duplicateWarningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showDuplicateWarning(message: string) {
+    setDuplicateWarning(message);
+    if (duplicateWarningTimer.current) clearTimeout(duplicateWarningTimer.current);
+    duplicateWarningTimer.current = setTimeout(() => setDuplicateWarning(null), 3000);
+  }
 
   useEffect(() => {
     fetch("/api/criteria")
@@ -75,7 +83,25 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
         return;
       }
 
-      setEntryNumbers(lines);
+      const seen = new Set<string>();
+      const deduped: string[] = [];
+      let skipped = 0;
+      for (const line of lines) {
+        const key = line.toLowerCase();
+        if (seen.has(key)) {
+          skipped++;
+          continue;
+        }
+        seen.add(key);
+        deduped.push(line);
+      }
+      if (skipped > 0) {
+        showDuplicateWarning(
+          skipped === 1 ? "1 duplicate was skipped — duplicates aren't allowed." : `${skipped} duplicates were skipped — duplicates aren't allowed.`
+        );
+      }
+
+      setEntryNumbers(deduped);
       setResults(null);
       setSubmittedCount(null);
       setErrorsOnly(false);
@@ -84,7 +110,19 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
     reader.readAsText(file);
     e.target.value = "";
   }
+
+  /** Duplicate Inventory IDs are rejected the moment they'd repeat within this batch, not just flagged. */
   function updateEntry(index: number, value: string) {
+    const trimmed = value.trim();
+    const isDuplicate =
+      trimmed !== "" && entryNumbers.some((v, i) => i !== index && v.trim().toLowerCase() === trimmed.toLowerCase());
+    if (isDuplicate) {
+      setEntryNumbers((prev) => prev.map((v, i) => (i === index ? "" : v)));
+      showDuplicateWarning(`"${trimmed}" is already in this batch — duplicates aren't allowed.`);
+      setResults(null);
+      setSubmittedCount(null);
+      return;
+    }
     setEntryNumbers((prev) => prev.map((v, i) => (i === index ? value : v)));
     setResults(null);
     setSubmittedCount(null);
@@ -147,21 +185,6 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
     return results?.find((r) => r.entry_number === id.trim());
   }
 
-  /** Flags rows whose Inventory ID repeats elsewhere in this batch, live as you type — before Check & Submit ever runs. */
-  const duplicateIndexes = useMemo(() => {
-    const seen = new Map<string, number[]>();
-    entryNumbers.forEach((v, i) => {
-      const key = v.trim().toLowerCase();
-      if (!key) return;
-      seen.set(key, [...(seen.get(key) ?? []), i]);
-    });
-    const dupes = new Set<number>();
-    for (const idxs of seen.values()) {
-      if (idxs.length > 1) idxs.forEach((i) => dupes.add(i));
-    }
-    return dupes;
-  }, [entryNumbers]);
-
   const totalCount = useMemo(() => entryNumbers.filter((e) => e.trim() !== "").length, [entryNumbers]);
 
   const errorCount = results ? results.filter((r) => !r.valid).length : 0;
@@ -207,9 +230,7 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
           Inventory ID <span className="text-slate font-normal">· Count: {totalCount}</span>
         </p>
         <div className="flex gap-4 items-center">
-          {duplicateIndexes.size > 0 && (
-            <span className="text-xs font-medium text-topaz">{duplicateIndexes.size} duplicate{duplicateIndexes.size > 1 ? "s" : ""}</span>
-          )}
+          {duplicateWarning && <span className="text-xs font-medium text-topaz">{duplicateWarning}</span>}
           {results && errorCount > 0 && (
             <label className="flex items-center gap-1.5 text-xs text-slate cursor-pointer">
               <input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
@@ -237,7 +258,6 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
         {visibleIndexes.map((i) => {
           const val = entryNumbers[i];
           const result = statusFor(val);
-          const isDuplicate = !result && duplicateIndexes.has(i);
           return (
             <div key={i} className="flex gap-3 items-center">
               <span className="text-slate/60 font-mono text-xs w-6 text-right">{i + 1}</span>
@@ -245,22 +265,18 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
                 ref={(el) => {
                   rowRefs.current[i] = el;
                 }}
-                className={`field-input flex-1 ${
-                  result ? (result.valid ? "border-emerald" : "border-ruby") : isDuplicate ? "border-topaz" : ""
-                }`}
+                className={`field-input flex-1 ${result ? (result.valid ? "border-emerald" : "border-ruby") : ""}`}
                 value={val}
                 onChange={(e) => updateEntry(i, e.target.value)}
                 onKeyDown={(e) => handleRowKeyDown(e, i)}
                 placeholder="Inventory ID"
               />
-              {result ? (
+              {result && (
                 <span className={`text-xs font-mono w-64 ${result.valid ? "text-emerald" : "text-ruby"}`}>
                   {result.status}
                   {result.detail ? ` ${result.detail}` : ""}
                 </span>
-              ) : isDuplicate ? (
-                <span className="text-xs font-mono w-64 text-topaz">Duplicate in this batch</span>
-              ) : null}
+              )}
               {entryNumbers.length > 1 && (
                 <button
                   onClick={() => removeRow(i)}
