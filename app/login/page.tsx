@@ -32,7 +32,7 @@ function LoginContent() {
           <div>
             <div className="login-title">Reconciliation Register</div>
             <div className="login-sub" style={{ margin: 0 }}>
-              GemPundit MIS · Inventory Reconciliation
+              Inventory Reconciliation
             </div>
           </div>
         </div>
