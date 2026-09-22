@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getBigQuery, table } from "@/lib/bigquery";
+import { getBigQuery, inventoryMasterTable } from "@/lib/bigquery";
 
+// Gemstones are read-only here, sourced straight from the real inventory
+// master (Gemstone2) instead of a separate list this app owns -- there's no
+// "add gemstone" anymore, since it isn't this app's data to add to.
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -12,43 +15,11 @@ export async function GET() {
   const bq = getBigQuery();
   const [rows] = await bq.query({
     query: `
-      SELECT name FROM ${table("gemstones")}
-      WHERE is_active = TRUE
+      SELECT DISTINCT Gemstone2 AS name
+      FROM ${inventoryMasterTable()}
+      WHERE Gemstone2 IS NOT NULL AND TRIM(Gemstone2) != ''
       ORDER BY name
     `
   });
   return NextResponse.json({ gemstones: rows.map((r: any) => r.name) });
-}
-
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const body = await req.json().catch(() => ({}));
-  const name = (body?.name as string | undefined)?.trim();
-  if (!name) {
-    return NextResponse.json({ error: "name is required" }, { status: 400 });
-  }
-
-  const bq = getBigQuery();
-
-  const [existing] = await bq.query({
-    query: `SELECT name FROM ${table("gemstones")} WHERE LOWER(name) = LOWER(@name) LIMIT 1`,
-    params: { name }
-  });
-  if (existing.length > 0) {
-    return NextResponse.json({ error: `"${name}" already exists` }, { status: 409 });
-  }
-
-  await bq.query({
-    query: `
-      INSERT INTO ${table("gemstones")} (name, is_active, added_by, added_at)
-      VALUES (@name, TRUE, @addedBy, CURRENT_TIMESTAMP())
-    `,
-    params: { name, addedBy: session.user.email }
-  });
-
-  return NextResponse.json({ ok: true, name });
 }

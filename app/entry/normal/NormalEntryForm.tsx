@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import SearchableSelect from "@/components/SearchableSelect";
-import AddOptionButton from "@/components/AddOptionButton";
 
 interface RowResult {
   entry_number: string;
@@ -189,18 +188,7 @@ export default function NormalEntryForm({ onSaved }: { onSaved?: () => void }) {
           />
         </div>
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <p className="field-label mb-0">Gemstone</p>
-            <AddOptionButton
-              label="Gemstone"
-              endpoint="/api/gemstones"
-              onAdded={(name) => {
-                setGemstones((prev) => [...prev, name].sort());
-                setGemstone(name);
-                setResults(null);
-              }}
-            />
-          </div>
+          <p className="field-label">Gemstone</p>
           <SearchableSelect
             value={gemstone}
             onChange={(v) => {
@@ -209,8 +197,6 @@ export default function NormalEntryForm({ onSaved }: { onSaved?: () => void }) {
             }}
             options={gemstones}
             placeholder="Search gemstone…"
-            addEndpoint="/api/gemstones"
-            onAdded={(name) => setGemstones((prev) => [...prev, name].sort())}
           />
         </div>
       </div>

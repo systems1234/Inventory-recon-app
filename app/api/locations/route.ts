@@ -3,13 +3,27 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getBigQuery, table } from "@/lib/bigquery";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   const bq = getBigQuery();
+
+  // Plain mode (default): name-only list for the entry forms' dropdowns.
+  // Full mode: everything, for the /locations management view's table.
+  if (req.nextUrl.searchParams.get("full") === "1") {
+    const [rows] = await bq.query({
+      query: `
+        SELECT name, is_active, added_by, added_at
+        FROM ${table("locations")}
+        ORDER BY name
+      `
+    });
+    return NextResponse.json({ locations: rows });
+  }
+
   const [rows] = await bq.query({
     query: `
       SELECT name FROM ${table("locations")}

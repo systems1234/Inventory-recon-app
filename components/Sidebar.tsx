@@ -50,6 +50,12 @@ const icon = {
       <path d="M3 3v18h18" />
       <path d="M7 15l4-4 3 3 5-6" />
     </svg>
+  ),
+  locations: (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 22s7-7.58 7-12.5A7 7 0 005 9.5C5 14.42 12 22 12 22z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </svg>
   )
 };
 
@@ -58,6 +64,7 @@ const links: NavItem[] = [
   { href: "/entry/normal", label: "For Entry", icon: icon.normal },
   { href: "/entry/lot", label: "Lot Entry", icon: icon.lot },
   { href: "/entry/no-pkt", label: "No Pkt No.", icon: icon.noPkt },
+  { href: "/locations", label: "Locations", icon: icon.locations },
   { href: "/investigations", label: "Investigations", icon: icon.investigations }
 ];
 
