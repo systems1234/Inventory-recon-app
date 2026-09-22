@@ -11,20 +11,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const role = ((session.user as any).role ?? "member") as string;
   const requestedMonth = req.nextUrl.searchParams.get("month");
   const reconMonth = requestedMonth && /^\d{4}-\d{2}-01$/.test(requestedMonth) ? requestedMonth : currentReconMonth();
 
+  // Every signed-in user can see every submission for the month -- the
+  // personal views filter this same response down to "my entries" client
+  // side; the "All Entries" views show it as-is.
   const bq = getBigQuery();
   const [rows] = await bq.query({
     query: `
       SELECT lot_no, location, gemstone, no_of_pcs, total_carat_ct, comments, submitted_by, submitted_at
       FROM ${table("lot_entries")}
       WHERE recon_month = @reconMonth
-        AND (@role = 'admin' OR submitted_by = @email)
       ORDER BY submitted_at DESC
     `,
-    params: { reconMonth, role, email: session.user.email }
+    params: { reconMonth }
   });
 
   return NextResponse.json({ entries: rows, reconMonth });

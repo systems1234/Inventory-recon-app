@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
 import AppShell from "@/components/AppShell";
 import NormalEntryForm from "../NormalEntryForm";
 import SlideOver from "@/components/SlideOver";
@@ -20,8 +19,6 @@ interface Entry {
 }
 
 export default function NormalEntryAllPage() {
-  const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === "admin";
   const months = useMemo(() => recentMonths(), []);
 
   const [month, setMonth] = useState("");
@@ -83,7 +80,7 @@ export default function NormalEntryAllPage() {
     { key: "entry_number", label: "Inventory ID" },
     { key: "packet_no", label: "Packet No." },
     { key: "gemstone", label: "Gemstone" },
-    ...(isAdmin ? [{ key: "submitted_by", label: "Submitted By" }] : []),
+    { key: "submitted_by", label: "Submitted By" },
     { key: "submitted_at", label: "Submitted" }
   ];
 
@@ -112,14 +109,12 @@ export default function NormalEntryAllPage() {
             title="Filter by submitted date"
           />
           <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
-          {isAdmin && (
-            <MultiSelect
-              label="Submitted By"
-              options={submittedByOptions}
-              selected={submittedByFilter}
-              onChange={setSubmittedByFilter}
-            />
-          )}
+          <MultiSelect
+            label="Submitted By"
+            options={submittedByOptions}
+            selected={submittedByFilter}
+            onChange={setSubmittedByFilter}
+          />
           <input
             type="text"
             placeholder="Filter inventory ID"

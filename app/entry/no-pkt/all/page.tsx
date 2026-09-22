@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
 import AppShell from "@/components/AppShell";
 import NoPktEntryForm from "../NoPktEntryForm";
 import SlideOver from "@/components/SlideOver";
@@ -20,8 +19,6 @@ interface Entry {
 }
 
 export default function NoPktEntryAllPage() {
-  const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === "admin";
   const months = useMemo(() => recentMonths(), []);
 
   const [month, setMonth] = useState("");
@@ -85,7 +82,7 @@ export default function NoPktEntryAllPage() {
     { key: "entry_number", label: "Inventory ID" },
     { key: "location", label: "Location" },
     { key: "gemstone", label: "Gemstone" },
-    ...(isAdmin ? [{ key: "submitted_by", label: "Submitted By" }] : []),
+    { key: "submitted_by", label: "Submitted By" },
     { key: "submitted_at", label: "Submitted" }
   ];
 
@@ -108,14 +105,12 @@ export default function NoPktEntryAllPage() {
           </select>
           <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
           <MultiSelect label="Location" options={locationOptions} selected={locationFilter} onChange={setLocationFilter} />
-          {isAdmin && (
-            <MultiSelect
-              label="Submitted By"
-              options={submittedByOptions}
-              selected={submittedByFilter}
-              onChange={setSubmittedByFilter}
-            />
-          )}
+          <MultiSelect
+            label="Submitted By"
+            options={submittedByOptions}
+            selected={submittedByFilter}
+            onChange={setSubmittedByFilter}
+          />
           <button onClick={handleExport} disabled={filtered.length === 0} className="btn-secondary btn-sm">
             Export CSV
           </button>

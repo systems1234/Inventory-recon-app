@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
 import AppShell from "@/components/AppShell";
 import LotEntryForm from "../LotEntryForm";
 import SlideOver from "@/components/SlideOver";
@@ -22,8 +21,6 @@ interface Entry {
 }
 
 export default function LotEntryAllPage() {
-  const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === "admin";
   const months = useMemo(() => recentMonths(), []);
 
   const [month, setMonth] = useState("");
@@ -91,7 +88,7 @@ export default function LotEntryAllPage() {
     { key: "gemstone", label: "Gemstone" },
     { key: "no_of_pcs", label: "Pcs" },
     { key: "total_carat_ct", label: "Carat Ct" },
-    ...(isAdmin ? [{ key: "submitted_by", label: "Submitted By" }] : []),
+    { key: "submitted_by", label: "Submitted By" },
     { key: "submitted_at", label: "Submitted" }
   ];
 
@@ -114,14 +111,12 @@ export default function LotEntryAllPage() {
           </select>
           <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
           <MultiSelect label="Location" options={locationOptions} selected={locationFilter} onChange={setLocationFilter} />
-          {isAdmin && (
-            <MultiSelect
-              label="Submitted By"
-              options={submittedByOptions}
-              selected={submittedByFilter}
-              onChange={setSubmittedByFilter}
-            />
-          )}
+          <MultiSelect
+            label="Submitted By"
+            options={submittedByOptions}
+            selected={submittedByFilter}
+            onChange={setSubmittedByFilter}
+          />
           <input
             type="text"
             placeholder="Filter lot no."
