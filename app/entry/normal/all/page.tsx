@@ -28,6 +28,7 @@ export default function NormalEntryAllPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
 
   const [gemstoneOptions, setGemstoneOptions] = useState<string[]>([]);
   const [dateFilter, setDateFilter] = useState("");
@@ -129,7 +130,13 @@ export default function NormalEntryAllPage() {
           <button onClick={handleExport} disabled={filtered.length === 0} className="btn-secondary btn-sm">
             Export CSV
           </button>
-          <button onClick={() => setFormOpen(true)} className="btn-primary whitespace-nowrap">
+          <button
+            onClick={() => {
+              setFormDirty(false);
+              setFormOpen(true);
+            }}
+            className="btn-primary whitespace-nowrap"
+          >
             + New
           </button>
         </>
@@ -144,9 +151,19 @@ export default function NormalEntryAllPage() {
         />
       </div>
 
-      <SlideOver open={formOpen} onClose={() => setFormOpen(false)} title="New For Entry">
+      <SlideOver
+        open={formOpen}
+        onClose={() => {
+          setFormDirty(false);
+          setFormOpen(false);
+        }}
+        confirmClose={formDirty}
+        title="New For Entry"
+      >
         <NormalEntryForm
+          onDirtyChange={setFormDirty}
           onSaved={() => {
+            setFormDirty(false);
             setFormOpen(false);
             load(month);
           }}

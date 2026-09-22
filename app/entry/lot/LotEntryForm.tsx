@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import SearchableSelect from "@/components/SearchableSelect";
 
-export default function LotEntryForm({ onSaved }: { onSaved?: () => void }) {
+export default function LotEntryForm({
+  onSaved,
+  onDirtyChange
+}: {
+  onSaved?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
+}) {
   const [gemstones, setGemstones] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
 
@@ -24,6 +30,12 @@ export default function LotEntryForm({ onSaved }: { onSaved?: () => void }) {
         setLocations(data.locations ?? []);
       });
   }, []);
+
+  useEffect(() => {
+    const dirty = Boolean(location || gemstone || lotNo || pcs || totalCaratCt || comments);
+    onDirtyChange?.(dirty);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, gemstone, lotNo, pcs, totalCaratCt, comments]);
 
   function resetForm() {
     setLotNo("");

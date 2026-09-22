@@ -10,7 +10,18 @@ interface RowResult {
   valid: boolean;
 }
 
-export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
+/** Inventory IDs are always numeric — strip anything else as it's typed or pasted. */
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+export default function NoPktEntryForm({
+  onSaved,
+  onDirtyChange
+}: {
+  onSaved?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
+}) {
   const [gemstones, setGemstones] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
 
@@ -50,6 +61,12 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
     }
   }, [entryNumbers]);
 
+  useEffect(() => {
+    const dirty = location !== "" || gemstone !== "" || entryNumbers.some((e) => e.trim() !== "");
+    onDirtyChange?.(dirty);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, gemstone, entryNumbers]);
+
   function downloadTemplate() {
     const csv = "Inventory ID\n";
     const blob = new Blob([csv], { type: "text/csv" });
@@ -78,21 +95,22 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
         lines.shift();
       }
 
-      if (lines.length === 0) {
-        setCsvError("That file had no inventory IDs in it.");
+      const numeric = lines.map(digitsOnly).filter((l) => l !== "");
+
+      if (numeric.length === 0) {
+        setCsvError("That file had no numeric inventory IDs in it.");
         return;
       }
 
       const seen = new Set<string>();
       const deduped: string[] = [];
       let skipped = 0;
-      for (const line of lines) {
-        const key = line.toLowerCase();
-        if (seen.has(key)) {
+      for (const line of numeric) {
+        if (seen.has(line)) {
           skipped++;
           continue;
         }
-        seen.add(key);
+        seen.add(line);
         deduped.push(line);
       }
       if (skipped > 0) {
@@ -111,14 +129,17 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
     e.target.value = "";
   }
 
-  /** Duplicate Inventory IDs are rejected the moment they'd repeat within this batch, not just flagged. */
-  function updateEntry(index: number, value: string) {
-    const trimmed = value.trim();
-    const isDuplicate =
-      trimmed !== "" && entryNumbers.some((v, i) => i !== index && v.trim().toLowerCase() === trimmed.toLowerCase());
+  /**
+   * Inventory IDs are numeric-only (non-digits are silently dropped as you
+   * type/paste) and duplicates are rejected the moment they'd repeat within
+   * this batch, not just flagged.
+   */
+  function updateEntry(index: number, rawValue: string) {
+    const value = digitsOnly(rawValue);
+    const isDuplicate = value !== "" && entryNumbers.some((v, i) => i !== index && v === value);
     if (isDuplicate) {
       setEntryNumbers((prev) => prev.map((v, i) => (i === index ? "" : v)));
-      showDuplicateWarning(`"${trimmed}" is already in this batch — duplicates aren't allowed.`);
+      showDuplicateWarning(`"${value}" is already in this batch — duplicates aren't allowed.`);
       setResults(null);
       setSubmittedCount(null);
       return;
@@ -201,62 +222,65 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div>
-          <p className="field-label">Location</p>
-          <SearchableSelect
-            value={location}
-            onChange={(v) => {
-              setLocation(v);
-              setResults(null);
-            }}
-            options={locations}
-            placeholder="Search location…"
-          />
+      <div className="sticky top-0 z-10 bg-white">
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div>
+            <p className="field-label">Location</p>
+            <SearchableSelect
+              value={location}
+              onChange={(v) => {
+                setLocation(v);
+                setResults(null);
+              }}
+              options={locations}
+              placeholder="Search location…"
+            />
+          </div>
+          <div>
+            <p className="field-label">Gemstone</p>
+            <SearchableSelect
+              value={gemstone}
+              onChange={(v) => {
+                setGemstone(v);
+                setResults(null);
+              }}
+              options={gemstones}
+              placeholder="Search gemstone…"
+            />
+          </div>
         </div>
-        <div>
-          <p className="field-label">Gemstone</p>
-          <SearchableSelect
-            value={gemstone}
-            onChange={(v) => {
-              setGemstone(v);
-              setResults(null);
-            }}
-            options={gemstones}
-            placeholder="Search gemstone…"
-          />
+
+        <div className="flex items-center justify-between mb-3 pb-3 border-b border-line">
+          <p className="field-label mb-0">
+            Inventory ID <span className="text-slate font-normal">· Count: {totalCount}</span>
+          </p>
+          <div className="flex gap-4 items-center">
+            {duplicateWarning && <span className="text-xs font-medium text-topaz">{duplicateWarning}</span>}
+            {results && errorCount > 0 && (
+              <label className="flex items-center gap-1.5 text-xs text-slate cursor-pointer">
+                <input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
+                Errors only ({errorCount})
+              </label>
+            )}
+            <button onClick={downloadTemplate} className="text-amethyst text-xs font-medium hover:underline">
+              Download template
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} className="text-amethyst text-xs font-medium hover:underline">
+              Upload CSV
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={handleCsvUpload}
+            />
+          </div>
         </div>
+
+        {csvError && <p className="text-ruby text-xs mb-3">{csvError}</p>}
       </div>
 
-      <div className="flex items-center justify-between mb-3">
-        <p className="field-label mb-0">
-          Inventory ID <span className="text-slate font-normal">· Count: {totalCount}</span>
-        </p>
-        <div className="flex gap-4 items-center">
-          {duplicateWarning && <span className="text-xs font-medium text-topaz">{duplicateWarning}</span>}
-          {results && errorCount > 0 && (
-            <label className="flex items-center gap-1.5 text-xs text-slate cursor-pointer">
-              <input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
-              Errors only ({errorCount})
-            </label>
-          )}
-          <button onClick={downloadTemplate} className="text-amethyst text-xs font-medium hover:underline">
-            Download template
-          </button>
-          <button onClick={() => fileInputRef.current?.click()} className="text-amethyst text-xs font-medium hover:underline">
-            Upload CSV
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={handleCsvUpload}
-          />
-        </div>
-      </div>
-
-      {csvError && <p className="text-ruby text-xs mb-3">{csvError}</p>}
       <div className="space-y-2 mb-4">
         {visibleIndexes.map((i) => {
           const val = entryNumbers[i];
@@ -268,6 +292,8 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
                 ref={(el) => {
                   rowRefs.current[i] = el;
                 }}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 className={`field-input flex-1 ${result ? (result.valid ? "border-emerald" : "border-ruby") : ""}`}
                 value={val}
                 onChange={(e) => updateEntry(i, e.target.value)}
