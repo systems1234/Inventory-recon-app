@@ -41,8 +41,38 @@ export default function MultiSelect({ label, options, selected, onChange, placeh
 
   return (
     <div ref={containerRef} style={{ position: "relative", display: "inline-block" }}>
-      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen((o) => !o)}>
+      <button
+        type="button"
+        className="btn btn-secondary btn-sm"
+        onClick={() => setOpen((o) => !o)}
+        style={selected.length > 0 ? { display: "inline-flex", alignItems: "center", gap: 6 } : undefined}
+      >
         {summary}
+        {selected.length > 0 && (
+          <span
+            role="button"
+            aria-label={`Clear ${label} filter`}
+            title={`Clear ${label} filter`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange([]);
+            }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 14,
+              height: 14,
+              borderRadius: "50%",
+              background: "var(--g-200)",
+              color: "var(--g-600)",
+              fontSize: 10,
+              lineHeight: 1
+            }}
+          >
+            ×
+          </span>
+        )}
       </button>
       {open && (
         <div className="colpick-pop ms-pop long" style={{ position: "absolute", top: 34, zIndex: 30 }}>

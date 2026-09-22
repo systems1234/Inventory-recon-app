@@ -142,11 +142,14 @@ export default function NormalEntryForm({ onSaved }: { onSaved?: () => void }) {
    * focuses a new row automatically, matching how the old Google Sheet
    * behaved (Enter there just created the next row) instead of requiring a
    * manual "+ Add entry" click after every single scan. On an earlier row,
-   * Enter just moves to the next field.
+   * Enter just moves to the next field. A rejected duplicate clears the
+   * field before this fires, so an empty row here means nothing was
+   * actually accepted — stay put instead of spawning another blank row.
    */
   function handleRowKeyDown(e: React.KeyboardEvent<HTMLInputElement>, index: number) {
     if (e.key !== "Enter") return;
     e.preventDefault();
+    if (entryNumbers[index].trim() === "") return;
     if (index === entryNumbers.length - 1) {
       addRow(true);
     } else {
