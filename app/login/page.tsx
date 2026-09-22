@@ -43,7 +43,9 @@ function LoginContent() {
             className="login-domain-note"
             style={{ marginBottom: 14, background: "var(--s-overdue-bg)", color: "var(--s-overdue)" }}
           >
-            This account isn't registered for the reconciliation register. Ask your admin to add you.
+            {error === "AccessDenied"
+              ? "This account isn't registered for the reconciliation register. Ask your admin to add you."
+              : "Something went wrong signing you in — please try again."}
           </div>
         )}
 

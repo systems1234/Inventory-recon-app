@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { getBigQuery, table } from "./bigquery";
 import type { AppUser } from "./types";
 
-async function lookupUser(email: string): Promise<AppUser | null> {
+async function queryUser(email: string): Promise<AppUser | null> {
   const bq = getBigQuery();
   const query = `
     SELECT user_id, name, role, active
@@ -14,6 +14,22 @@ async function lookupUser(email: string): Promise<AppUser | null> {
   const [rows] = await bq.query({ query, params: { email } });
   if (!rows.length) return null;
   return rows[0] as AppUser;
+}
+
+/**
+ * A cold serverless function can hit a transient BigQuery auth/connection
+ * hiccup on its very first query, which would otherwise surface to the user
+ * as "this account isn't registered" (indistinguishable from a real
+ * rejection) even though a retry a second later succeeds. One retry here
+ * absorbs that instead of failing sign-in on it.
+ */
+async function lookupUser(email: string): Promise<AppUser | null> {
+  try {
+    return await queryUser(email);
+  } catch (err) {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return await queryUser(email);
+  }
 }
 
 export const authOptions: NextAuthOptions = {
