@@ -2,7 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { employeeTable, getBigQuery, table } from "./bigquery";
 
-/** The value this app's rows carry in Employee_Data.Project_Systems. */
+/** The value this app's rows carry in employee.Project_id. */
 const PROJECT_SYSTEM = "inventory_recon";
 
 interface EmployeeRecord {
@@ -16,19 +16,20 @@ interface AppUser {
 
 /**
  * Sign-in access now comes from HR's own employee directory
- * (LifeCycle_FMS.Employee_Data) instead of a separate allow-list this app
- * owns: a Google account may sign in only if it has a row there whose
- * Project_Systems column lists "inventory_recon" (a comma-separated list on
- * that column, so this splits rather than doing a flat equality check).
+ * (gempundit_db.employee) instead of a separate allow-list this app owns: a
+ * Google account may sign in only if it has a row there whose Project_id
+ * column lists "inventory_recon" -- that column can hold a single value or
+ * several separated by commas, so this splits rather than doing a flat
+ * equality check.
  */
 async function queryEmployee(email: string): Promise<EmployeeRecord | null> {
   const bq = getBigQuery();
   const query = `
-    SELECT Employee_Name AS name
+    SELECT display_name AS name
     FROM ${employeeTable()}
-    WHERE LOWER(Email_ID) = LOWER(@email)
+    WHERE LOWER(work_email) = LOWER(@email)
       AND EXISTS (
-        SELECT 1 FROM UNNEST(SPLIT(Project_Systems, ',')) AS system
+        SELECT 1 FROM UNNEST(SPLIT(Project_id, ',')) AS system
         WHERE LOWER(TRIM(system)) = @projectSystem
       )
     LIMIT 1
@@ -39,9 +40,9 @@ async function queryEmployee(email: string): Promise<EmployeeRecord | null> {
 }
 
 /**
- * Admin status is still tracked in this app's own `users` table (Employee_Data
- * has no such concept) -- anyone not listed there, or not marked admin, is a
- * plain member.
+ * Admin status is still tracked in this app's own `users` table (the
+ * employee directory has no such concept) -- anyone not listed there, or
+ * not marked admin, is a plain member.
  */
 async function queryRole(email: string): Promise<"member" | "admin"> {
   const bq = getBigQuery();

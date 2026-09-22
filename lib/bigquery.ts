@@ -76,9 +76,9 @@ export function inventoryMasterTable(): string {
 }
 
 /**
- * HR's own employee directory (LifeCycle_FMS.Employee_Data) -- sign-in
- * access is gated on a row here whose Project_Systems column lists
- * "inventory_recon", instead of a separate allow-list this app owns.
+ * HR's own employee directory (gempundit_db.employee) -- sign-in access is
+ * gated on a row here whose Project_id column lists "inventory_recon",
+ * instead of a separate allow-list this app owns.
  */
 export function employeeTable(): string {
   const id = process.env.EMPLOYEE_DATA_TABLE_ID;
