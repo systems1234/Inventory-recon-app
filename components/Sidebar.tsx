@@ -61,6 +61,13 @@ const links: NavItem[] = [
   { href: "/investigations", label: "Investigations", icon: icon.investigations }
 ];
 
+/** Full tables (all users, every filter) — moved off the main views and into their own nav group. */
+const allViewLinks: NavItem[] = [
+  { href: "/entry/normal/all", label: "For Entry", icon: icon.normal },
+  { href: "/entry/lot/all", label: "Lot Entry", icon: icon.lot },
+  { href: "/entry/no-pkt/all", label: "No Pkt No.", icon: icon.noPkt }
+];
+
 function initials(name?: string | null): string {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/);
@@ -123,6 +130,19 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             <span className="label-text">Report</span>
           </Link>
         )}
+      </div>
+
+      <div className="nav-group">
+        <div className="nav-label">All Entries</div>
+        {allViewLinks.map((l) => {
+          const active = pathname === l.href;
+          return (
+            <Link key={l.href} href={l.href} onClick={onCloseMobile} className={`nav-item ${active ? "active" : ""}`}>
+              {l.icon}
+              <span className="label-text">{l.label}</span>
+            </Link>
+          );
+        })}
       </div>
 
       <div className="sidebar-footer">

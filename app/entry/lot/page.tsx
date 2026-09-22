@@ -6,7 +6,6 @@ import AppShell from "@/components/AppShell";
 import LotEntryForm from "./LotEntryForm";
 import SlideOver from "@/components/SlideOver";
 import EntriesTable from "@/components/EntriesTable";
-import MultiSelect from "@/components/MultiSelect";
 import { recentMonths } from "@/lib/months";
 import { unwrap, downloadCsv } from "@/lib/format";
 
@@ -21,31 +20,19 @@ interface Entry {
   [key: string]: unknown;
 }
 
+/**
+ * Personal view: only the current user's own submissions, no filters beyond
+ * month. The full table with gemstone/location/submitted-by filters lives
+ * at /entry/lot/all.
+ */
 export default function LotEntryPage() {
   const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === "admin";
   const months = useMemo(() => recentMonths(), []);
 
   const [month, setMonth] = useState("");
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
-
-  const [gemstoneOptions, setGemstoneOptions] = useState<string[]>([]);
-  const [locationOptions, setLocationOptions] = useState<string[]>([]);
-  const [gemstoneFilter, setGemstoneFilter] = useState<string[]>([]);
-  const [locationFilter, setLocationFilter] = useState<string[]>([]);
-  const [lotNoFilter, setLotNoFilter] = useState("");
-  const [submittedByFilter, setSubmittedByFilter] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetch("/api/criteria")
-      .then((r) => r.json())
-      .then((data) => {
-        setGemstoneOptions(data.gemstones ?? []);
-        setLocationOptions(data.locations ?? []);
-      });
-  }, []);
 
   function load(m?: string) {
     setLoading(true);
@@ -69,20 +56,10 @@ export default function LotEntryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
 
-  const submittedByOptions = useMemo(
-    () => Array.from(new Set(entries.map((e) => unwrap(e.submitted_by)).filter(Boolean))).sort(),
-    [entries]
+  const myEntries = useMemo(
+    () => entries.filter((e) => unwrap(e.submitted_by) === session?.user?.email),
+    [entries, session?.user?.email]
   );
-
-  const filtered = useMemo(() => {
-    return entries.filter((e) => {
-      if (gemstoneFilter.length > 0 && !gemstoneFilter.includes(e.gemstone)) return false;
-      if (locationFilter.length > 0 && !locationFilter.includes(e.location)) return false;
-      if (lotNoFilter && !e.lot_no?.toLowerCase().includes(lotNoFilter.toLowerCase())) return false;
-      if (submittedByFilter.length > 0 && !submittedByFilter.includes(unwrap(e.submitted_by))) return false;
-      return true;
-    });
-  }, [entries, gemstoneFilter, locationFilter, lotNoFilter, submittedByFilter]);
 
   const columns = [
     { key: "lot_no", label: "Lot No." },
@@ -90,18 +67,17 @@ export default function LotEntryPage() {
     { key: "gemstone", label: "Gemstone" },
     { key: "no_of_pcs", label: "Pcs" },
     { key: "total_carat_ct", label: "Carat Ct" },
-    ...(isAdmin ? [{ key: "submitted_by", label: "Submitted By" }] : []),
     { key: "submitted_at", label: "Submitted" }
   ];
 
   function handleExport() {
-    downloadCsv(`lot-entry_${month}.csv`, columns, filtered);
+    downloadCsv(`lot-entry_${month}.csv`, columns, myEntries);
   }
 
   return (
     <AppShell
       pageTitle="Lot Entry"
-      pageEyebrow="Batch-level reconciliation"
+      pageEyebrow="Your submissions"
       topbarActions={
         <>
           <select className="filter-select" value={month} onChange={(e) => setMonth(e.target.value)}>
@@ -111,24 +87,7 @@ export default function LotEntryPage() {
               </option>
             ))}
           </select>
-          <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
-          <MultiSelect label="Location" options={locationOptions} selected={locationFilter} onChange={setLocationFilter} />
-          {isAdmin && (
-            <MultiSelect
-              label="Submitted By"
-              options={submittedByOptions}
-              selected={submittedByFilter}
-              onChange={setSubmittedByFilter}
-            />
-          )}
-          <input
-            type="text"
-            placeholder="Filter lot no."
-            className="filter-search"
-            value={lotNoFilter}
-            onChange={(e) => setLotNoFilter(e.target.value)}
-          />
-          <button onClick={handleExport} disabled={filtered.length === 0} className="btn-secondary btn-sm">
+          <button onClick={handleExport} disabled={myEntries.length === 0} className="btn-secondary btn-sm">
             Export CSV
           </button>
           <button onClick={() => setFormOpen(true)} className="btn-primary whitespace-nowrap">
@@ -138,12 +97,7 @@ export default function LotEntryPage() {
       }
     >
       <div className="h-full flex flex-col overflow-hidden">
-        <EntriesTable
-          rows={filtered}
-          columns={columns}
-          loading={loading}
-          resetSignal={`${month}|${gemstoneFilter.join(",")}|${locationFilter.join(",")}|${lotNoFilter}|${submittedByFilter.join(",")}`}
-        />
+        <EntriesTable rows={myEntries} columns={columns} loading={loading} resetSignal={month} />
       </div>
 
       <SlideOver open={formOpen} onClose={() => setFormOpen(false)} title="New Lot Entry">

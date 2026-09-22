@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import SearchableSelect from "@/components/SearchableSelect";
+import AddOptionButton from "@/components/AddOptionButton";
 
 export default function LotEntryForm({ onSaved }: { onSaved?: () => void }) {
   const [gemstones, setGemstones] = useState<string[]>([]);
@@ -67,7 +68,17 @@ export default function LotEntryForm({ onSaved }: { onSaved?: () => void }) {
     <div>
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <p className="field-label">Location</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="field-label mb-0">Location</p>
+            <AddOptionButton
+              label="Location"
+              endpoint="/api/locations"
+              onAdded={(name) => {
+                setLocations((prev) => [...prev, name].sort());
+                setLocation(name);
+              }}
+            />
+          </div>
           <SearchableSelect
             value={location}
             onChange={setLocation}
@@ -78,7 +89,17 @@ export default function LotEntryForm({ onSaved }: { onSaved?: () => void }) {
           />
         </div>
         <div>
-          <p className="field-label">Gemstone</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="field-label mb-0">Gemstone</p>
+            <AddOptionButton
+              label="Gemstone"
+              endpoint="/api/gemstones"
+              onAdded={(name) => {
+                setGemstones((prev) => [...prev, name].sort());
+                setGemstone(name);
+              }}
+            />
+          </div>
           <SearchableSelect
             value={gemstone}
             onChange={setGemstone}
