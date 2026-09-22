@@ -22,3 +22,23 @@ export function formatDateTime(val: unknown): string {
     ? raw
     : d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
+
+function csvField(value: string): string {
+  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
+
+/** Downloads `rows` as a CSV file, using `columns` (key, label) for header + order. */
+export function downloadCsv(filename: string, columns: { key: string; label: string }[], rows: Record<string, unknown>[]) {
+  const lines = [
+    columns.map((c) => csvField(c.label)).join(","),
+    ...rows.map((row) => columns.map((c) => csvField(unwrap(row[c.key]))).join(","))
+  ];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

@@ -8,6 +8,7 @@ import SlideOver from "@/components/SlideOver";
 import EntriesTable from "@/components/EntriesTable";
 import MultiSelect from "@/components/MultiSelect";
 import { recentMonths } from "@/lib/months";
+import { unwrap, downloadCsv } from "@/lib/format";
 
 interface Entry {
   entry_number: string;
@@ -32,6 +33,7 @@ export default function NoPktEntryPage() {
   const [locationOptions, setLocationOptions] = useState<string[]>([]);
   const [gemstoneFilter, setGemstoneFilter] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState<string[]>([]);
+  const [submittedByFilter, setSubmittedByFilter] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/criteria")
@@ -64,21 +66,31 @@ export default function NoPktEntryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
 
+  const submittedByOptions = useMemo(
+    () => Array.from(new Set(entries.map((e) => unwrap(e.submitted_by)).filter(Boolean))).sort(),
+    [entries]
+  );
+
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       if (gemstoneFilter.length > 0 && !gemstoneFilter.includes(e.gemstone)) return false;
       if (locationFilter.length > 0 && !locationFilter.includes(e.location)) return false;
+      if (submittedByFilter.length > 0 && !submittedByFilter.includes(unwrap(e.submitted_by))) return false;
       return true;
     });
-  }, [entries, gemstoneFilter, locationFilter]);
+  }, [entries, gemstoneFilter, locationFilter, submittedByFilter]);
 
   const columns = [
-    { key: "entry_number", label: "Entry No." },
+    { key: "entry_number", label: "Inventory ID" },
     { key: "location", label: "Location" },
     { key: "gemstone", label: "Gemstone" },
     ...(isAdmin ? [{ key: "submitted_by", label: "Submitted By" }] : []),
     { key: "submitted_at", label: "Submitted" }
   ];
+
+  function handleExport() {
+    downloadCsv(`no-pkt-entry_${month}.csv`, columns, filtered);
+  }
 
   return (
     <AppShell
@@ -95,6 +107,17 @@ export default function NoPktEntryPage() {
           </select>
           <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
           <MultiSelect label="Location" options={locationOptions} selected={locationFilter} onChange={setLocationFilter} />
+          {isAdmin && (
+            <MultiSelect
+              label="Submitted By"
+              options={submittedByOptions}
+              selected={submittedByFilter}
+              onChange={setSubmittedByFilter}
+            />
+          )}
+          <button onClick={handleExport} disabled={filtered.length === 0} className="btn-secondary btn-sm">
+            Export CSV
+          </button>
           <button onClick={() => setFormOpen(true)} className="btn-primary whitespace-nowrap">
             + New
           </button>
@@ -106,7 +129,7 @@ export default function NoPktEntryPage() {
           rows={filtered}
           columns={columns}
           loading={loading}
-          resetSignal={`${month}|${gemstoneFilter.join(",")}|${locationFilter.join(",")}`}
+          resetSignal={`${month}|${gemstoneFilter.join(",")}|${locationFilter.join(",")}|${submittedByFilter.join(",")}`}
         />
       </div>
 

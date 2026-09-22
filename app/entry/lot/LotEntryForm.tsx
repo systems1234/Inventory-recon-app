@@ -68,11 +68,25 @@ export default function LotEntryForm({ onSaved }: { onSaved?: () => void }) {
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <p className="field-label">Location</p>
-          <SearchableSelect value={location} onChange={setLocation} options={locations} placeholder="Search location…" />
+          <SearchableSelect
+            value={location}
+            onChange={setLocation}
+            options={locations}
+            placeholder="Search location…"
+            addEndpoint="/api/locations"
+            onAdded={(name) => setLocations((prev) => [...prev, name].sort())}
+          />
         </div>
         <div>
           <p className="field-label">Gemstone</p>
-          <SearchableSelect value={gemstone} onChange={setGemstone} options={gemstones} placeholder="Search gemstone…" />
+          <SearchableSelect
+            value={gemstone}
+            onChange={setGemstone}
+            options={gemstones}
+            placeholder="Search gemstone…"
+            addEndpoint="/api/gemstones"
+            onAdded={(name) => setGemstones((prev) => [...prev, name].sort())}
+          />
         </div>
         <div>
           <p className="field-label">Lot No.</p>

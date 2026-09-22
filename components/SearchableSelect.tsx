@@ -7,6 +7,10 @@ interface SearchableSelectProps {
   onChange: (value: string) => void;
   options: string[];
   placeholder?: string;
+  /** POST { name } here to add a new option when nothing matches. Omit to disable. */
+  addEndpoint?: string;
+  /** Called with the newly-added name after a successful add, so the caller can refresh its options list. */
+  onAdded?: (name: string) => void;
 }
 
 /**
@@ -14,12 +18,22 @@ interface SearchableSelectProps {
  * options (gemstone, location) where a native <select> forces scrolling
  * through the whole list to find anything. Type to filter, click or
  * Enter to pick, Escape or click-outside to close without changing the
- * selection.
+ * selection. With addEndpoint set, typing a name that doesn't exist yet
+ * offers an "Add" option that saves it as a new option.
  */
-export default function SearchableSelect({ value, onChange, options, placeholder = "Search…" }: SearchableSelectProps) {
+export default function SearchableSelect({
+  value,
+  onChange,
+  options,
+  placeholder = "Search…",
+  addEndpoint,
+  onAdded
+}: SearchableSelectProps) {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Keep the visible text in sync when the selection changes from outside
@@ -33,6 +47,7 @@ export default function SearchableSelect({ value, onChange, options, placeholder
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
         setQuery(value);
+        setAddError(null);
       }
     }
     document.addEventListener("mousedown", onClickOutside);
@@ -45,10 +60,37 @@ export default function SearchableSelect({ value, onChange, options, placeholder
     return options.filter((o) => o.toLowerCase().includes(q));
   }, [options, query, value]);
 
+  const trimmedQuery = query.trim();
+  const exactMatch = options.some((o) => o.toLowerCase() === trimmedQuery.toLowerCase());
+  const canOfferAdd = !!addEndpoint && trimmedQuery !== "" && !exactMatch;
+
   function select(opt: string) {
     onChange(opt);
     setQuery(opt);
     setOpen(false);
+    setAddError(null);
+  }
+
+  async function handleAdd() {
+    if (!addEndpoint || !trimmedQuery) return;
+    setAdding(true);
+    setAddError(null);
+    try {
+      const res = await fetch(addEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmedQuery })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAddError(data.error ?? "Couldn't add that");
+        return;
+      }
+      onAdded?.(trimmedQuery);
+      select(trimmedQuery);
+    } finally {
+      setAdding(false);
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -65,6 +107,7 @@ export default function SearchableSelect({ value, onChange, options, placeholder
     } else if (e.key === "Escape") {
       setOpen(false);
       setQuery(value);
+      setAddError(null);
     }
   }
 
@@ -78,6 +121,7 @@ export default function SearchableSelect({ value, onChange, options, placeholder
           setQuery(e.target.value);
           setOpen(true);
           setHighlight(0);
+          setAddError(null);
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={handleKeyDown}
@@ -92,7 +136,7 @@ export default function SearchableSelect({ value, onChange, options, placeholder
             boxShadow: "var(--shadow-md)"
           }}
         >
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && !canOfferAdd ? (
             <li className="px-3 py-2 text-slate">No matches</li>
           ) : (
             filtered.map((opt, i) => (
@@ -110,6 +154,19 @@ export default function SearchableSelect({ value, onChange, options, placeholder
               </li>
             ))
           )}
+          {canOfferAdd && (
+            <li
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleAdd();
+              }}
+              className="px-3 py-1.5 cursor-pointer border-t border-line text-sapphire font-medium"
+              style={{ opacity: adding ? 0.6 : 1 }}
+            >
+              {adding ? "Adding…" : `+ Add "${trimmedQuery}"`}
+            </li>
+          )}
+          {addError && <li className="px-3 py-1.5 text-ruby text-xs">{addError}</li>}
         </ul>
       )}
     </div>

@@ -21,7 +21,10 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [submittedCount, setSubmittedCount] = useState<number | null>(null);
   const [csvError, setCsvError] = useState<string | null>(null);
+  const [errorsOnly, setErrorsOnly] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const rowRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const focusIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     fetch("/api/criteria")
@@ -32,8 +35,15 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
       });
   }, []);
 
+  useEffect(() => {
+    if (focusIndexRef.current !== null) {
+      rowRefs.current[focusIndexRef.current]?.focus();
+      focusIndexRef.current = null;
+    }
+  }, [entryNumbers]);
+
   function downloadTemplate() {
-    const csv = "Entry Number\n";
+    const csv = "Inventory ID\n";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -56,18 +66,19 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
         .map((l) => l.trim())
         .filter((l) => l !== "");
 
-      if (lines.length > 0 && /^entry\s*number$/i.test(lines[0])) {
+      if (lines.length > 0 && /^(inventory\s*id|entry\s*number)$/i.test(lines[0])) {
         lines.shift();
       }
 
       if (lines.length === 0) {
-        setCsvError("That file had no entry numbers in it.");
+        setCsvError("That file had no inventory IDs in it.");
         return;
       }
 
       setEntryNumbers(lines);
       setResults(null);
       setSubmittedCount(null);
+      setErrorsOnly(false);
     };
     reader.onerror = () => setCsvError("Couldn't read that file — try again.");
     reader.readAsText(file);
@@ -79,12 +90,32 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
     setSubmittedCount(null);
   }
 
-  function addRow() {
-    setEntryNumbers((prev) => [...prev, ""]);
+  function addRow(focus = false) {
+    setEntryNumbers((prev) => {
+      const next = [...prev, ""];
+      if (focus) focusIndexRef.current = next.length - 1;
+      return next;
+    });
   }
 
   function removeRow(index: number) {
     setEntryNumbers((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  /**
+   * Scanners fill a field then send Enter. On the last row this creates and
+   * focuses a new row automatically instead of requiring a manual
+   * "+ Add entry" click after every single scan. On an earlier row, Enter
+   * just moves to the next field.
+   */
+  function handleRowKeyDown(e: React.KeyboardEvent<HTMLInputElement>, index: number) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (index === entryNumbers.length - 1) {
+      addRow(true);
+    } else {
+      rowRefs.current[index + 1]?.focus();
+    }
   }
 
   async function handleCheckAndSubmit() {
@@ -102,6 +133,7 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
       if (data.submitted > 0) {
         setSubmittedCount(data.submitted);
         setEntryNumbers([""]);
+        setErrorsOnly(false);
         onSaved?.();
       }
     } finally {
@@ -114,6 +146,15 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
   function statusFor(id: string): RowResult | undefined {
     return results?.find((r) => r.entry_number === id.trim());
   }
+
+  const errorCount = results ? results.filter((r) => !r.valid).length : 0;
+  const visibleIndexes = entryNumbers
+    .map((val, i) => i)
+    .filter((i) => {
+      if (!errorsOnly || !results) return true;
+      const r = statusFor(entryNumbers[i]);
+      return r ? !r.valid : false;
+    });
 
   return (
     <div>
@@ -128,6 +169,8 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
             }}
             options={locations}
             placeholder="Search location…"
+            addEndpoint="/api/locations"
+            onAdded={(name) => setLocations((prev) => [...prev, name].sort())}
           />
         </div>
         <div>
@@ -140,13 +183,21 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
             }}
             options={gemstones}
             placeholder="Search gemstone…"
+            addEndpoint="/api/gemstones"
+            onAdded={(name) => setGemstones((prev) => [...prev, name].sort())}
           />
         </div>
       </div>
 
       <div className="flex items-center justify-between mb-3">
-        <p className="field-label mb-0">Entry Numbers</p>
-        <div className="flex gap-4">
+        <p className="field-label mb-0">Inventory ID</p>
+        <div className="flex gap-4 items-center">
+          {results && errorCount > 0 && (
+            <label className="flex items-center gap-1.5 text-xs text-slate cursor-pointer">
+              <input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
+              Errors only ({errorCount})
+            </label>
+          )}
           <button onClick={downloadTemplate} className="text-amethyst text-xs font-medium hover:underline">
             Download template
           </button>
@@ -165,18 +216,23 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
 
       {csvError && <p className="text-ruby text-xs mb-3">{csvError}</p>}
       <div className="space-y-2 mb-4">
-        {entryNumbers.map((val, i) => {
+        {visibleIndexes.map((i) => {
+          const val = entryNumbers[i];
           const result = statusFor(val);
           return (
             <div key={i} className="flex gap-3 items-center">
               <span className="text-slate/60 font-mono text-xs w-6 text-right">{i + 1}</span>
               <input
+                ref={(el) => {
+                  rowRefs.current[i] = el;
+                }}
                 className={`field-input flex-1 ${
                   result ? (result.valid ? "border-emerald" : "border-ruby") : ""
                 }`}
                 value={val}
                 onChange={(e) => updateEntry(i, e.target.value)}
-                placeholder="Entry number"
+                onKeyDown={(e) => handleRowKeyDown(e, i)}
+                placeholder="Inventory ID"
               />
               {result && (
                 <span className={`text-xs font-mono w-64 ${result.valid ? "text-emerald" : "text-ruby"}`}>
@@ -199,7 +255,7 @@ export default function NoPktEntryForm({ onSaved }: { onSaved?: () => void }) {
       </div>
 
       <div className="flex gap-3 mb-8">
-        <button onClick={addRow} className="btn-ghost">
+        <button onClick={() => addRow(true)} className="btn-ghost">
           + Add entry
         </button>
         <button onClick={handleCheckAndSubmit} disabled={!canCheck || submitting} className="btn-primary">

@@ -64,12 +64,14 @@ export function bomTable(): string {
 }
 
 /**
- * Same pattern as bomTable() — the real inventory master view, also in
- * IMS_New_Version, used by the monthly reconciliation reports.
+ * The real inventory master table -- IMS_New_Version.Inventory_Master,
+ * column Inventory_ID. Every entry number submitted through any form must
+ * exist here; anything else (e.g. Final_Inventory_Master, a derived view)
+ * is not the source of truth for this check.
  */
-export function masterTable(): string {
-  const id = process.env.FINAL_INVENTORY_MASTER_ID;
-  if (!id) throw new Error("FINAL_INVENTORY_MASTER_ID is not set");
+export function inventoryMasterTable(): string {
+  const id = process.env.INVENTORY_MASTER_ID;
+  if (!id) throw new Error("INVENTORY_MASTER_ID is not set");
   return `\`${id}\``;
 }
 

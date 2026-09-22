@@ -8,6 +8,7 @@ import SlideOver from "@/components/SlideOver";
 import EntriesTable from "@/components/EntriesTable";
 import MultiSelect from "@/components/MultiSelect";
 import { recentMonths } from "@/lib/months";
+import { unwrap, downloadCsv } from "@/lib/format";
 
 interface Entry {
   lot_no: string;
@@ -35,6 +36,7 @@ export default function LotEntryPage() {
   const [gemstoneFilter, setGemstoneFilter] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState<string[]>([]);
   const [lotNoFilter, setLotNoFilter] = useState("");
+  const [submittedByFilter, setSubmittedByFilter] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/criteria")
@@ -67,14 +69,20 @@ export default function LotEntryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
 
+  const submittedByOptions = useMemo(
+    () => Array.from(new Set(entries.map((e) => unwrap(e.submitted_by)).filter(Boolean))).sort(),
+    [entries]
+  );
+
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       if (gemstoneFilter.length > 0 && !gemstoneFilter.includes(e.gemstone)) return false;
       if (locationFilter.length > 0 && !locationFilter.includes(e.location)) return false;
       if (lotNoFilter && !e.lot_no?.toLowerCase().includes(lotNoFilter.toLowerCase())) return false;
+      if (submittedByFilter.length > 0 && !submittedByFilter.includes(unwrap(e.submitted_by))) return false;
       return true;
     });
-  }, [entries, gemstoneFilter, locationFilter, lotNoFilter]);
+  }, [entries, gemstoneFilter, locationFilter, lotNoFilter, submittedByFilter]);
 
   const columns = [
     { key: "lot_no", label: "Lot No." },
@@ -85,6 +93,10 @@ export default function LotEntryPage() {
     ...(isAdmin ? [{ key: "submitted_by", label: "Submitted By" }] : []),
     { key: "submitted_at", label: "Submitted" }
   ];
+
+  function handleExport() {
+    downloadCsv(`lot-entry_${month}.csv`, columns, filtered);
+  }
 
   return (
     <AppShell
@@ -101,6 +113,14 @@ export default function LotEntryPage() {
           </select>
           <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
           <MultiSelect label="Location" options={locationOptions} selected={locationFilter} onChange={setLocationFilter} />
+          {isAdmin && (
+            <MultiSelect
+              label="Submitted By"
+              options={submittedByOptions}
+              selected={submittedByFilter}
+              onChange={setSubmittedByFilter}
+            />
+          )}
           <input
             type="text"
             placeholder="Filter lot no."
@@ -108,6 +128,9 @@ export default function LotEntryPage() {
             value={lotNoFilter}
             onChange={(e) => setLotNoFilter(e.target.value)}
           />
+          <button onClick={handleExport} disabled={filtered.length === 0} className="btn-secondary btn-sm">
+            Export CSV
+          </button>
           <button onClick={() => setFormOpen(true)} className="btn-primary whitespace-nowrap">
             + New
           </button>
@@ -119,7 +142,7 @@ export default function LotEntryPage() {
           rows={filtered}
           columns={columns}
           loading={loading}
-          resetSignal={`${month}|${gemstoneFilter.join(",")}|${locationFilter.join(",")}|${lotNoFilter}`}
+          resetSignal={`${month}|${gemstoneFilter.join(",")}|${locationFilter.join(",")}|${lotNoFilter}|${submittedByFilter.join(",")}`}
         />
       </div>
 

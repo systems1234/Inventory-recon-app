@@ -63,7 +63,7 @@ export default function DashboardPage() {
 
       <div className="flex gap-3">
         <Link href="/entry/normal" className="btn-primary">
-          New normal entry
+          New for entry
         </Link>
         <Link href="/entry/lot" className="btn-ghost">
           New lot entry

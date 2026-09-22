@@ -8,7 +8,7 @@ import SlideOver from "@/components/SlideOver";
 import EntriesTable from "@/components/EntriesTable";
 import MultiSelect from "@/components/MultiSelect";
 import { recentMonths } from "@/lib/months";
-import { unwrap } from "@/lib/format";
+import { unwrap, downloadCsv } from "@/lib/format";
 
 interface Entry {
   entry_number: string;
@@ -33,6 +33,7 @@ export default function NormalEntryPage() {
   const [dateFilter, setDateFilter] = useState("");
   const [gemstoneFilter, setGemstoneFilter] = useState<string[]>([]);
   const [entryNoFilter, setEntryNoFilter] = useState("");
+  const [submittedByFilter, setSubmittedByFilter] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/criteria")
@@ -62,26 +63,36 @@ export default function NormalEntryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
 
+  const submittedByOptions = useMemo(
+    () => Array.from(new Set(entries.map((e) => unwrap(e.submitted_by)).filter(Boolean))).sort(),
+    [entries]
+  );
+
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       if (dateFilter && !unwrap(e.submitted_at).startsWith(dateFilter)) return false;
       if (gemstoneFilter.length > 0 && !gemstoneFilter.includes(e.gemstone)) return false;
       if (entryNoFilter && !e.entry_number?.toLowerCase().includes(entryNoFilter.toLowerCase())) return false;
+      if (submittedByFilter.length > 0 && !submittedByFilter.includes(unwrap(e.submitted_by))) return false;
       return true;
     });
-  }, [entries, dateFilter, gemstoneFilter, entryNoFilter]);
+  }, [entries, dateFilter, gemstoneFilter, entryNoFilter, submittedByFilter]);
 
   const columns = [
-    { key: "entry_number", label: "Entry No." },
+    { key: "entry_number", label: "Inventory ID" },
     { key: "packet_no", label: "Packet No." },
     { key: "gemstone", label: "Gemstone" },
     ...(isAdmin ? [{ key: "submitted_by", label: "Submitted By" }] : []),
     { key: "submitted_at", label: "Submitted" }
   ];
 
+  function handleExport() {
+    downloadCsv(`for-entry_${month}.csv`, columns, filtered);
+  }
+
   return (
     <AppShell
-      pageTitle="Normal Entry"
+      pageTitle="For Entry"
       pageEyebrow="Packet-level reconciliation"
       topbarActions={
         <>
@@ -100,13 +111,24 @@ export default function NormalEntryPage() {
             title="Filter by submitted date"
           />
           <MultiSelect label="Gemstone" options={gemstoneOptions} selected={gemstoneFilter} onChange={setGemstoneFilter} />
+          {isAdmin && (
+            <MultiSelect
+              label="Submitted By"
+              options={submittedByOptions}
+              selected={submittedByFilter}
+              onChange={setSubmittedByFilter}
+            />
+          )}
           <input
             type="text"
-            placeholder="Filter entry no."
+            placeholder="Filter inventory ID"
             className="filter-search"
             value={entryNoFilter}
             onChange={(e) => setEntryNoFilter(e.target.value)}
           />
+          <button onClick={handleExport} disabled={filtered.length === 0} className="btn-secondary btn-sm">
+            Export CSV
+          </button>
           <button onClick={() => setFormOpen(true)} className="btn-primary whitespace-nowrap">
             + New
           </button>
@@ -118,11 +140,11 @@ export default function NormalEntryPage() {
           rows={filtered}
           columns={columns}
           loading={loading}
-          resetSignal={`${month}|${dateFilter}|${gemstoneFilter.join(",")}|${entryNoFilter}`}
+          resetSignal={`${month}|${dateFilter}|${gemstoneFilter.join(",")}|${entryNoFilter}|${submittedByFilter.join(",")}`}
         />
       </div>
 
-      <SlideOver open={formOpen} onClose={() => setFormOpen(false)} title="New Normal Entry">
+      <SlideOver open={formOpen} onClose={() => setFormOpen(false)} title="New For Entry">
         <NormalEntryForm
           onSaved={() => {
             setFormOpen(false);

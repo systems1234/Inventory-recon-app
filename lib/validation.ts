@@ -1,4 +1,4 @@
-import { getBigQuery, table, bomTable, masterTable } from "./bigquery";
+import { getBigQuery, table, bomTable, inventoryMasterTable } from "./bigquery";
 
 export type EntryStatus =
   | "Valid Inventory No"
@@ -7,6 +7,7 @@ export type EntryStatus =
   | "Invalid Inventory No - More than 6 Digits"
   | "Invalid Inventory No - Not 94 or 800"
   | "Invalid Inventory No - Duplicate"
+  | "Invalid Inventory No - Not Found in Inventory Master"
   | "Invalid Inventory No - Already Present in BOM"
   | "Invalid Inventory No - Already Saved in Database"
   | "Invalid Inventory No - Not Matching Packet No";
@@ -60,6 +61,21 @@ export async function validateNormalEntries(
     : [[]];
   const alreadyInDatabase = new Set(existingRows.map((r: any) => r.entry_number));
 
+  // Every entry number must be a real inventory ID. Cast to STRING:
+  // Inventory_ID is INT64 in Inventory_Master, entry numbers arrive as
+  // strings from the form.
+  const [masterRows] = nonBlank.length
+    ? await bq.query({
+        query: `
+          SELECT CAST(Inventory_ID AS STRING) AS inv_id
+          FROM ${inventoryMasterTable()}
+          WHERE CAST(Inventory_ID AS STRING) IN UNNEST(@ids)
+        `,
+        params: { ids: nonBlank }
+      })
+    : [[]];
+  const inMaster = new Set(masterRows.map((r: any) => r.inv_id));
+
   const results: EntryCheckResult[] = [];
 
   for (const raw of entryNumbers) {
@@ -83,6 +99,8 @@ export async function validateNormalEntries(
       status = "Invalid Inventory No - Not 94 or 800";
     } else if (count > 1) {
       status = "Invalid Inventory No - Duplicate";
+    } else if (!inMaster.has(id)) {
+      status = "Invalid Inventory No - Not Found in Inventory Master";
     } else if (bomMap.has(id) && bomMap.get(id) !== "RTO") {
       status = "Invalid Inventory No - Already Present in BOM";
     } else if (alreadyInDatabase.has(id)) {
@@ -104,7 +122,7 @@ export type NoPktStatus =
   | "Duplicate Entry"
   | "Already entered under a Packet No."
   | "Already saved in database"
-  | "Not Found in Final Inventory Master";
+  | "Not Found in Inventory Master";
 
 export interface NoPktCheckResult {
   entry_number: string;
@@ -143,14 +161,14 @@ export async function validateNoPktEntries(
 
   // Entry numbers here are meant to be real inventory IDs (just without a
   // packet number attached) -- unlike Normal Entry, nothing else in this
-  // form checks that they actually exist. Cast to STRING: Int_mas_Inventory_ID
-  // is INT64 in Final_Inventory_Master, entry numbers arrive as strings.
+  // form checks that they actually exist. Cast to STRING: Inventory_ID
+  // is INT64 in Inventory_Master, entry numbers arrive as strings.
   const [masterRows] = nonBlank.length
     ? await bq.query({
         query: `
-          SELECT CAST(Int_mas_Inventory_ID AS STRING) AS inv_id
-          FROM ${masterTable()}
-          WHERE CAST(Int_mas_Inventory_ID AS STRING) IN UNNEST(@ids)
+          SELECT CAST(Inventory_ID AS STRING) AS inv_id
+          FROM ${inventoryMasterTable()}
+          WHERE CAST(Inventory_ID AS STRING) IN UNNEST(@ids)
         `,
         params: { ids: nonBlank }
       })
@@ -186,7 +204,7 @@ export async function validateNoPktEntries(
     if (count > 1) {
       results.push({ entry_number: id, status: "Duplicate Entry", valid: false });
     } else if (!inMaster.has(id)) {
-      results.push({ entry_number: id, status: "Not Found in Final Inventory Master", valid: false });
+      results.push({ entry_number: id, status: "Not Found in Inventory Master", valid: false });
     } else if (foundUnderPacket.has(id)) {
       results.push({
         entry_number: id,

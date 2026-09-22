@@ -55,7 +55,7 @@ const icon = {
 
 const links: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: icon.overview },
-  { href: "/entry/normal", label: "Normal Entry", icon: icon.normal },
+  { href: "/entry/normal", label: "For Entry", icon: icon.normal },
   { href: "/entry/lot", label: "Lot Entry", icon: icon.lot },
   { href: "/entry/no-pkt", label: "No Pkt No.", icon: icon.noPkt },
   { href: "/investigations", label: "Investigations", icon: icon.investigations }
