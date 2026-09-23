@@ -113,7 +113,7 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
         <div className="brand-mark">R</div>
         <div className="brand-text">
           <div className="brand-name">Recon Register</div>
-          <div className="brand-sub">GemPundit MIS</div>
+          <div className="brand-sub"></div>
         </div>
       </div>
 
