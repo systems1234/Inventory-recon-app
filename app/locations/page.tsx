@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import AppShell from "@/components/AppShell";
 import AddOptionButton from "@/components/AddOptionButton";
 import EntriesTable from "@/components/EntriesTable";
@@ -15,6 +16,10 @@ interface LocationRow {
 }
 
 export default function LocationsPage() {
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role ?? "member";
+  const canManage = role === "admin" || role === "senior";
+
   const [rows, setRows] = useState<LocationRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +52,9 @@ export default function LocationsPage() {
     <AppShell
       pageTitle="Locations"
       pageEyebrow="Reference data"
-      topbarActions={<AddOptionButton label="Location" endpoint="/api/locations" onAdded={() => load()} />}
+      topbarActions={
+        canManage ? <AddOptionButton label="Location" endpoint="/api/locations" onAdded={() => load()} /> : undefined
+      }
     >
       <div className="h-full flex flex-col overflow-hidden">
         <EntriesTable rows={displayRows} columns={columns} loading={loading} />

@@ -40,6 +40,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const role = ((session.user as any).role ?? "member") as string;
+  if (role !== "admin" && role !== "senior") {
+    return NextResponse.json({ error: "Only Senior and Admin accounts can add locations" }, { status: 403 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const name = (body?.name as string | undefined)?.trim();
   if (!name) {

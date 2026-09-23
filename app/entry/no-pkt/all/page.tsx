@@ -31,6 +31,7 @@ export default function NoPktEntryAllPage() {
   const [locationOptions, setLocationOptions] = useState<string[]>([]);
   const [gemstoneFilter, setGemstoneFilter] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState<string[]>([]);
+  const [entryNoFilter, setEntryNoFilter] = useState("");
   const [submittedByFilter, setSubmittedByFilter] = useState<string[]>([]);
 
   useEffect(() => {
@@ -73,10 +74,11 @@ export default function NoPktEntryAllPage() {
     return entries.filter((e) => {
       if (gemstoneFilter.length > 0 && !gemstoneFilter.includes(e.gemstone)) return false;
       if (locationFilter.length > 0 && !locationFilter.includes(e.location)) return false;
+      if (entryNoFilter && !e.entry_number?.toLowerCase().includes(entryNoFilter.toLowerCase())) return false;
       if (submittedByFilter.length > 0 && !submittedByFilter.includes(unwrap(e.submitted_by))) return false;
       return true;
     });
-  }, [entries, gemstoneFilter, locationFilter, submittedByFilter]);
+  }, [entries, gemstoneFilter, locationFilter, entryNoFilter, submittedByFilter]);
 
   const columns = [
     { key: "entry_number", label: "Inventory ID" },
@@ -111,6 +113,13 @@ export default function NoPktEntryAllPage() {
             selected={submittedByFilter}
             onChange={setSubmittedByFilter}
           />
+          <input
+            type="text"
+            placeholder="Filter inventory ID"
+            className="filter-search"
+            value={entryNoFilter}
+            onChange={(e) => setEntryNoFilter(e.target.value)}
+          />
           <button onClick={handleExport} disabled={filtered.length === 0} className="btn-secondary btn-sm">
             Export CSV
           </button>
@@ -131,7 +140,7 @@ export default function NoPktEntryAllPage() {
           rows={filtered}
           columns={columns}
           loading={loading}
-          resetSignal={`${month}|${gemstoneFilter.join(",")}|${locationFilter.join(",")}|${submittedByFilter.join(",")}`}
+          resetSignal={`${month}|${gemstoneFilter.join(",")}|${locationFilter.join(",")}|${entryNoFilter}|${submittedByFilter.join(",")}`}
         />
       </div>
 

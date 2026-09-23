@@ -94,6 +94,7 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const role = (session?.user as any)?.role ?? "member";
   const isAdmin = role === "admin";
+  const roleLabel = role === "admin" ? "Admin" : role === "senior" ? "Senior" : "Member";
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -156,7 +157,7 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
         <div className="avatar">{initials(session?.user?.name)}</div>
         <div>
           <div className="user-name">{session?.user?.name ?? ""}</div>
-          <div className="user-role">{isAdmin ? "Admin" : "Member"}</div>
+          <div className="user-role">{roleLabel}</div>
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}

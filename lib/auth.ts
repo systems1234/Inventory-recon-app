@@ -11,7 +11,7 @@ interface EmployeeRecord {
 
 interface AppUser {
   name: string;
-  role: "member" | "admin";
+  role: "member" | "senior" | "admin";
 }
 
 /**
@@ -40,11 +40,13 @@ async function queryEmployee(email: string): Promise<EmployeeRecord | null> {
 }
 
 /**
- * Admin status is still tracked in this app's own `users` table (the
- * employee directory has no such concept) -- anyone not listed there, or
- * not marked admin, is a plain member.
+ * Role is still tracked in this app's own `users` table (the employee
+ * directory has no such concept) -- anyone not listed there is a plain
+ * member. "senior" is an intermediate tier: a few extra capabilities
+ * (e.g. managing reference data) without admin-only things like running
+ * investigations on demand.
  */
-async function queryRole(email: string): Promise<"member" | "admin"> {
+async function queryRole(email: string): Promise<"member" | "senior" | "admin"> {
   const bq = getBigQuery();
   const query = `
     SELECT role FROM ${table("users")}
@@ -53,7 +55,9 @@ async function queryRole(email: string): Promise<"member" | "admin"> {
   `;
   const [rows] = await bq.query({ query, params: { email } });
   if (!rows.length) return "member";
-  return rows[0].role === "admin" ? "admin" : "member";
+  if (rows[0].role === "admin") return "admin";
+  if (rows[0].role === "senior") return "senior";
+  return "member";
 }
 
 async function queryAppUser(email: string): Promise<AppUser | null> {
