@@ -301,9 +301,9 @@ export default function NoPktEntryForm({
                 placeholder="Inventory ID"
               />
               {result && (
-                <span className={`text-xs font-mono w-64 ${result.valid ? "text-emerald" : "text-ruby"}`}>
+                <span className={`text-xs font-mono w-96 ${result.valid ? "text-emerald" : "text-ruby"}`}>
                   {result.status}
-                  {result.detail ? ` ${result.detail}` : ""}
+                  {result.detail ? ` — ${result.detail}` : ""}
                 </span>
               )}
               {entryNumbers.length > 1 && (

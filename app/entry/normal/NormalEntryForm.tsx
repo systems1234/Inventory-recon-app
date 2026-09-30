@@ -6,6 +6,7 @@ import SearchableSelect from "@/components/SearchableSelect";
 interface RowResult {
   entry_number: string;
   status: string;
+  detail?: string;
   valid: boolean;
 }
 
@@ -299,8 +300,9 @@ export default function NormalEntryForm({
                 placeholder="Inventory ID"
               />
               {result && (
-                <span className={`text-xs font-mono w-56 ${result.valid ? "text-emerald" : "text-ruby"}`}>
+                <span className={`text-xs font-mono w-80 ${result.valid ? "text-emerald" : "text-ruby"}`}>
                   {result.status}
+                  {result.detail ? ` — ${result.detail}` : ""}
                 </span>
               )}
               {entryNumbers.length > 1 && (

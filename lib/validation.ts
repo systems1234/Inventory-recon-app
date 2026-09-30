@@ -11,6 +11,7 @@ export type EntryStatus =
   | "Invalid Inventory No - Out of Stock"
   | "Invalid Inventory No - Already Present in BOM"
   | "Invalid Inventory No - Already Saved in Database"
+  | "Invalid Inventory No - Already Saved in No Pkt No. Entries"
   | "Invalid Inventory No - Not Matching Packet No";
 
 /**
@@ -43,6 +44,7 @@ async function fetchOutOfStockIds(ids: string[]): Promise<Set<string>> {
 export interface EntryCheckResult {
   entry_number: string;
   status: EntryStatus;
+  detail?: string; // e.g. who it was already submitted by
   valid: boolean;
 }
 
@@ -79,7 +81,7 @@ export async function validateNormalEntries(
   const [existingRows] = nonBlank.length
     ? await bq.query({
         query: `
-          SELECT entry_number
+          SELECT entry_number, submitted_by
           FROM ${table("normal_entries")}
           WHERE recon_month = @reconMonth
             AND entry_number IN UNNEST(@ids)
@@ -87,7 +89,23 @@ export async function validateNormalEntries(
         params: { reconMonth, ids: nonBlank }
       })
     : [[]];
-  const alreadyInDatabase = new Set(existingRows.map((r: any) => r.entry_number));
+  const alreadyInDatabase = new Map<string, string>(existingRows.map((r: any) => [r.entry_number, r.submitted_by]));
+
+  // An inventory ID can't live in both normal_entries and no_pkt_entries at
+  // once -- whichever table already has it for this month wins, and blocks
+  // the other from taking it too.
+  const [noPktRows] = nonBlank.length
+    ? await bq.query({
+        query: `
+          SELECT entry_number, submitted_by
+          FROM ${table("no_pkt_entries")}
+          WHERE recon_month = @reconMonth
+            AND entry_number IN UNNEST(@ids)
+        `,
+        params: { reconMonth, ids: nonBlank }
+      })
+    : [[]];
+  const alreadyInNoPkt = new Map<string, string>(noPktRows.map((r: any) => [r.entry_number, r.submitted_by]));
 
   // Every entry number must be a real inventory ID. Cast to STRING:
   // Inventory_ID is INT64 in Inventory_Master, entry numbers arrive as
@@ -120,6 +138,7 @@ export async function validateNormalEntries(
     seenCounts.set(id, count);
 
     let status: EntryStatus;
+    let detail: string | undefined;
 
     if (id === trimmedPacket) {
       status = "Invalid No - Same as Packet No";
@@ -137,13 +156,17 @@ export async function validateNormalEntries(
       status = "Invalid Inventory No - Already Present in BOM";
     } else if (alreadyInDatabase.has(id)) {
       status = "Invalid Inventory No - Already Saved in Database";
+      detail = `Submitted by ${alreadyInDatabase.get(id)}`;
+    } else if (alreadyInNoPkt.has(id)) {
+      status = "Invalid Inventory No - Already Saved in No Pkt No. Entries";
+      detail = `Submitted by ${alreadyInNoPkt.get(id)}`;
     } else if (id.slice(0, trimmedPacket.length) !== trimmedPacket) {
       status = "Invalid Inventory No - Not Matching Packet No";
     } else {
       status = "Valid Inventory No";
     }
 
-    results.push({ entry_number: id, status, valid: status === "Valid Inventory No" });
+    results.push({ entry_number: id, status, detail, valid: status === "Valid Inventory No" });
   }
 
   return results;
@@ -180,7 +203,7 @@ export async function validateNoPktEntries(
   const [normalRows] = nonBlank.length
     ? await bq.query({
         query: `
-          SELECT entry_number, packet_no
+          SELECT entry_number, packet_no, submitted_by
           FROM ${table("normal_entries")}
           WHERE recon_month = @reconMonth
             AND entry_number IN UNNEST(@ids)
@@ -188,8 +211,8 @@ export async function validateNoPktEntries(
         params: { reconMonth, ids: nonBlank }
       })
     : [[]];
-  const foundUnderPacket = new Map<string, string>(
-    normalRows.map((r: any) => [r.entry_number, r.packet_no])
+  const foundUnderPacket = new Map<string, { packetNo: string; submittedBy: string }>(
+    normalRows.map((r: any) => [r.entry_number, { packetNo: r.packet_no, submittedBy: r.submitted_by }])
   );
 
   // Entry numbers here are meant to be real inventory IDs (just without a
@@ -213,7 +236,7 @@ export async function validateNoPktEntries(
   const [noPktRows] = nonBlank.length
     ? await bq.query({
         query: `
-          SELECT entry_number
+          SELECT entry_number, submitted_by
           FROM ${table("no_pkt_entries")}
           WHERE recon_month = @reconMonth
             AND entry_number IN UNNEST(@ids)
@@ -221,7 +244,7 @@ export async function validateNoPktEntries(
         params: { reconMonth, ids: nonBlank }
       })
     : [[]];
-  const alreadyInNoPktDatabase = new Set(noPktRows.map((r: any) => r.entry_number));
+  const alreadyInNoPktDatabase = new Map<string, string>(noPktRows.map((r: any) => [r.entry_number, r.submitted_by]));
 
   const seenCounts = new Map<string, number>();
   const results: NoPktCheckResult[] = [];
@@ -243,14 +266,20 @@ export async function validateNoPktEntries(
     } else if (outOfStock.has(id)) {
       results.push({ entry_number: id, status: "Out of Stock", valid: false });
     } else if (foundUnderPacket.has(id)) {
+      const found = foundUnderPacket.get(id)!;
       results.push({
         entry_number: id,
         status: "Already entered under a Packet No.",
-        detail: foundUnderPacket.get(id),
+        detail: `Packet ${found.packetNo} — submitted by ${found.submittedBy}`,
         valid: false
       });
     } else if (alreadyInNoPktDatabase.has(id)) {
-      results.push({ entry_number: id, status: "Already saved in database", valid: false });
+      results.push({
+        entry_number: id,
+        status: "Already saved in database",
+        detail: `Submitted by ${alreadyInNoPktDatabase.get(id)}`,
+        valid: false
+      });
     } else {
       results.push({ entry_number: id, status: "Valid", valid: true });
     }
