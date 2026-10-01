@@ -286,22 +286,24 @@ export default function NoPktEntryForm({
           const val = entryNumbers[i];
           const result = statusFor(val);
           return (
-            <div key={i} className="flex gap-3 items-center">
-              <span className="text-slate/60 font-mono text-xs w-6 text-right">{i + 1}</span>
+            <div key={i} className="flex gap-3 items-start">
+              <span className="text-slate/60 font-mono text-xs w-6 text-right pt-2">{i + 1}</span>
               <input
                 ref={(el) => {
                   rowRefs.current[i] = el;
                 }}
                 inputMode="numeric"
                 pattern="[0-9]*"
-                className={`field-input flex-1 ${result ? (result.valid ? "border-emerald" : "border-ruby") : ""}`}
+                className={`field-input w-32 shrink-0 ${result ? (result.valid ? "border-emerald" : "border-ruby") : ""}`}
                 value={val}
                 onChange={(e) => updateEntry(i, e.target.value)}
                 onKeyDown={(e) => handleRowKeyDown(e, i)}
                 placeholder="Inventory ID"
               />
               {result && (
-                <span className={`text-xs font-mono w-96 ${result.valid ? "text-emerald" : "text-ruby"}`}>
+                <span
+                  className={`text-xs font-mono flex-1 min-w-0 break-words pt-2 ${result.valid ? "text-emerald" : "text-ruby"}`}
+                >
                   {result.status}
                   {result.detail ? ` — ${result.detail}` : ""}
                 </span>
@@ -309,7 +311,7 @@ export default function NoPktEntryForm({
               {entryNumbers.length > 1 && (
                 <button
                   onClick={() => removeRow(i)}
-                  className="text-slate hover:text-ruby text-sm px-1"
+                  className="text-slate hover:text-ruby text-sm px-1 pt-2"
                   aria-label="Remove row"
                 >
                   ✕
