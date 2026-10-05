@@ -54,11 +54,17 @@ export default function SearchableSelect({
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [value]);
 
+  // Matches on every whitespace-separated word in the query, in any order,
+  // so e.g. "yellow sapp" finds "Sapphire - Yellow" as well as
+  // "Yellow Sapphire" -- not just an exact contiguous substring.
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (q === "" || q === value.toLowerCase()) return options;
-    return options.filter((o) => o.toLowerCase().includes(q));
-  }, [options, query, value]);
+    const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return options;
+    return options.filter((o) => {
+      const lower = o.toLowerCase();
+      return words.every((w) => lower.includes(w));
+    });
+  }, [options, query]);
 
   const trimmedQuery = query.trim();
   const exactMatch = options.some((o) => o.toLowerCase() === trimmedQuery.toLowerCase());
