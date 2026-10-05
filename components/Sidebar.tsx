@@ -56,6 +56,12 @@ const icon = {
       <path d="M12 22s7-7.58 7-12.5A7 7 0 005 9.5C5 14.42 12 22 12 22z" />
       <circle cx="12" cy="9.5" r="2.5" />
     </svg>
+  ),
+  combined: (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="10" cy="10" r="6" />
+      <path d="M21 21l-5.2-5.2" />
+    </svg>
   )
 };
 
@@ -70,6 +76,7 @@ const links: NavItem[] = [
 
 /** Full tables (all users, every filter) — moved off the main views and into their own nav group. */
 const allViewLinks: NavItem[] = [
+  { href: "/entry/combined", label: "For Entry + No Pkt No.", icon: icon.combined },
   { href: "/entry/normal/all", label: "For Entry", icon: icon.normal },
   { href: "/entry/lot/all", label: "Lot Entry", icon: icon.lot },
   { href: "/entry/no-pkt/all", label: "No Pkt No.", icon: icon.noPkt }
