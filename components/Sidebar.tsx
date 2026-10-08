@@ -71,7 +71,8 @@ const links: NavItem[] = [
   { href: "/entry/lot", label: "Lot Entry", icon: icon.lot },
   { href: "/entry/no-pkt", label: "No Pkt No.", icon: icon.noPkt },
   { href: "/locations", label: "Locations", icon: icon.locations },
-  { href: "/investigations", label: "Investigations", icon: icon.investigations }
+  { href: "/investigations", label: "Investigations", icon: icon.investigations },
+  { href: "/reconciliation-investigation", label: "Reconciliation Investigation", icon: icon.investigations }
 ];
 
 /** Full tables (all users, every filter) — moved off the main views and into their own nav group. */
