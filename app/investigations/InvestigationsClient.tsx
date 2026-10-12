@@ -408,7 +408,7 @@ export default function InvestigationsClient() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {runMessage && (
         <div
           className={`card p-3 mb-4 shrink-0 ${
@@ -509,6 +509,12 @@ export default function InvestigationsClient() {
                 {selectedInvestigation?.description && (
                   <p className="text-slate text-sm mt-0.5 max-w-2xl">{selectedInvestigation.description}</p>
                 )}
+                {!loading && (
+                  <p className="text-slate text-sm mt-0.5">
+                    <span className="font-semibold text-ink">{rows.length}</span> flagged case{rows.length === 1 ? "" : "s"}
+                    {filteredRows.length !== rows.length && <> · {filteredRows.length} matching filters</>}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {canRunSelected && selectedId && (
@@ -556,7 +562,7 @@ export default function InvestigationsClient() {
             )}
 
             {filterColumns.length > 0 && rows.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4 shrink-0">
+              <div className="flex flex-wrap gap-2 mb-3 shrink-0">
                 {filterColumns.map((col) => (
                   <input
                     key={col}
@@ -578,12 +584,16 @@ export default function InvestigationsClient() {
               <div className="card p-8 text-center text-slate">No rows match the current filters.</div>
             ) : (
               <div className="flex-1 min-h-0 flex flex-col">
-                <div className="card table-scroll flex-1 min-h-0">
+                <div className="card table-scroll flex-1 overflow-auto min-h-0">
                   <table className="cl-table">
                     <thead>
                       <tr>
                         {dataColumns.map((col, i) => (
-                          <th key={col} className={i === 0 ? "sticky left-0 bg-surface z-20" : ""}>
+                          <th
+                            key={col}
+                            className={i === 0 ? "sticky left-0 bg-surface" : ""}
+                            style={i === 0 ? { zIndex: 10 } : undefined}
+                          >
                             {col}
                           </th>
                         ))}

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const bq = getBigQuery();
   const [rows] = await bq.query({
     query: `
-      SELECT table_name, admin_only
+      SELECT table_name, view_name, admin_only
       FROM ${table("investigations")}
       WHERE id = @id AND is_active = TRUE
       LIMIT 1
@@ -35,11 +35,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unknown investigation" }, { status: 404 });
   }
 
-  const investigation = rows[0] as { table_name: string; admin_only: boolean };
+  const investigation = rows[0] as { table_name: string; view_name: string; admin_only: boolean };
   if (investigation.admin_only && role !== "admin") {
     return NextResponse.json({ error: "Admins only" }, { status: 403 });
   }
 
-  const reportRows = await fetchInvestigationReport(investigation.table_name, week);
+  const reportRows = await fetchInvestigationReport(investigation.table_name, investigation.view_name, week);
   return NextResponse.json({ rows: reportRows });
 }

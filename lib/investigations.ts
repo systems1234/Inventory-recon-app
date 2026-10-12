@@ -315,10 +315,20 @@ export interface ReportRow {
  * bookkeeping stripped but resolution columns kept — the UI needs those to
  * render the editable Solved Date / Action / Reason / Comment cells.
  */
-export async function fetchInvestigationReport(tableName: string, reconWeek: string): Promise<ReportRow[]> {
+export async function fetchInvestigationReport(
+  tableName: string,
+  viewName: string,
+  reconWeek: string
+): Promise<ReportRow[]> {
   const bq = getBigQuery();
+  // The saved table keeps every column it was ever created with, so a column
+  // later dropped from the view (e.g. a JSON dump) would otherwise keep
+  // showing from old rows. Only the view's current columns + the resolution
+  // columns are shown.
+  const viewColumns = (await fetchViewColumns([assertSafeIdentifier(viewName, "view_name")])).get(viewName);
+  const select = viewColumns?.length ? [...viewColumns, ...RESOLUTION_COLUMNS].join(", ") : "*";
   const [rows] = await bq.query({
-    query: `SELECT * FROM ${table(assertSafeIdentifier(tableName, "table_name"))} WHERE recon_week = CAST(@reconWeek AS DATE)`,
+    query: `SELECT ${select} FROM ${table(assertSafeIdentifier(tableName, "table_name"))} WHERE recon_week = CAST(@reconWeek AS DATE)`,
     params: { reconWeek }
   });
   return (rows as ReportRow[]).map((row) => {
@@ -326,6 +336,8 @@ export async function fetchInvestigationReport(tableName: string, reconWeek: str
     return rest;
   });
 }
+
+const RESOLUTION_COLUMNS = ["solved_date", "action", "reason", "comment", "updated_by", "updated_at"];
 
 export async function listReconWeeks(): Promise<{ recon_week: string; run_by: string; run_at: string }[]> {
   const bq = getBigQuery();
