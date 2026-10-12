@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { canChangeLocation } from "@/lib/roles";
 
 interface NavItem {
   href: string;
@@ -57,6 +58,12 @@ const icon = {
       <circle cx="12" cy="9.5" r="2.5" />
     </svg>
   ),
+  changeLocation: (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 22s7-7.58 7-12.5A7 7 0 005 9.5C5 14.42 12 22 12 22z" />
+      <path d="M9.5 9.5h5M12.5 7.5l2 2-2 2" />
+    </svg>
+  ),
   combined: (
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="10" cy="10" r="6" />
@@ -102,7 +109,8 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const role = (session?.user as any)?.role ?? "member";
   const isAdmin = role === "admin";
-  const roleLabel = role === "admin" ? "Admin" : role === "senior" ? "Senior" : "Member";
+  const roleLabel =
+    role === "admin" ? "Admin" : role === "senior" ? "Senior" : role === "manager" ? "Manager" : role === "tl" ? "TL" : "Member";
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -136,6 +144,16 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             </Link>
           );
         })}
+        {canChangeLocation(role) && (
+          <Link
+            href="/change-location"
+            onClick={onCloseMobile}
+            className={`nav-item ${pathname === "/change-location" ? "active" : ""}`}
+          >
+            {icon.changeLocation}
+            <span className="label-text">Change Location</span>
+          </Link>
+        )}
         {isAdmin && (
           <Link
             href="/dashboard/admin"

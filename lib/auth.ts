@@ -9,9 +9,11 @@ interface EmployeeRecord {
   name: string;
 }
 
+type AppRole = "member" | "senior" | "admin" | "manager" | "tl";
+
 interface AppUser {
   name: string;
-  role: "member" | "senior" | "admin";
+  role: AppRole;
 }
 
 /**
@@ -46,7 +48,7 @@ async function queryEmployee(email: string): Promise<EmployeeRecord | null> {
  * (e.g. managing reference data) without admin-only things like running
  * investigations on demand.
  */
-async function queryRole(email: string): Promise<"member" | "senior" | "admin"> {
+async function queryRole(email: string): Promise<AppRole> {
   const bq = getBigQuery();
   const query = `
     SELECT role FROM ${table("users")}
@@ -55,8 +57,8 @@ async function queryRole(email: string): Promise<"member" | "senior" | "admin"> 
   `;
   const [rows] = await bq.query({ query, params: { email } });
   if (!rows.length) return "member";
-  if (rows[0].role === "admin") return "admin";
-  if (rows[0].role === "senior") return "senior";
+  const role = String(rows[0].role ?? "").trim().toLowerCase();
+  if (role === "admin" || role === "senior" || role === "manager" || role === "tl") return role;
   return "member";
 }
 

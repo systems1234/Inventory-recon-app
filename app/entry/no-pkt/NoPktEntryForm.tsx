@@ -30,6 +30,8 @@ export default function NoPktEntryForm({
   const [entryNumbers, setEntryNumbers] = useState<string[]>([""]);
   const [results, setResults] = useState<RowResult[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [submittedCount, setSubmittedCount] = useState<number | null>(null);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [errorsOnly, setErrorsOnly] = useState(false);
@@ -180,17 +182,41 @@ export default function NoPktEntryForm({
     }
   }
 
-  async function handleCheckAndSubmit() {
-    setSubmitting(true);
+  async function postJson(url: string, body: unknown) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? "Something went wrong — please try again.");
+    return data;
+  }
+
+  /** Validates only — nothing is saved, and the form stays exactly as filled. */
+  async function handleCheck() {
+    setChecking(true);
     setSubmittedCount(null);
+    setActionError(null);
     try {
       const cleanEntries = entryNumbers.filter((e) => e.trim() !== "");
-      const res = await fetch("/api/entries/no-pkt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ location, gemstone, entry_numbers: cleanEntries })
-      });
-      const data = await res.json();
+      const data = await postJson("/api/entries/no-pkt/check", { entry_numbers: cleanEntries });
+      setResults(data.results ?? null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Check failed");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  /** The server re-runs every check before saving, so Submit is safe even without a prior Check. */
+  async function handleSubmit() {
+    setSubmitting(true);
+    setSubmittedCount(null);
+    setActionError(null);
+    try {
+      const cleanEntries = entryNumbers.filter((e) => e.trim() !== "");
+      const data = await postJson("/api/entries/no-pkt", { location, gemstone, entry_numbers: cleanEntries });
       setResults(data.results ?? null);
       if (data.submitted > 0) {
         setSubmittedCount(data.submitted);
@@ -198,6 +224,8 @@ export default function NoPktEntryForm({
         setErrorsOnly(false);
         onSaved?.();
       }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Submit failed");
     } finally {
       setSubmitting(false);
     }
@@ -326,8 +354,11 @@ export default function NoPktEntryForm({
         <button onClick={() => addRow(true)} className="btn-ghost">
           + Add entry
         </button>
-        <button onClick={handleCheckAndSubmit} disabled={!canCheck || submitting} className="btn-primary">
-          {submitting ? "Checking…" : "Check & Submit"}
+        <button onClick={handleCheck} disabled={!canCheck || checking || submitting} className="btn-ghost">
+          {checking ? "Checking…" : "Check"}
+        </button>
+        <button onClick={handleSubmit} disabled={!canCheck || checking || submitting} className="btn-primary">
+          {submitting ? "Submitting…" : "Submit"}
         </button>
       </div>
 
@@ -337,9 +368,21 @@ export default function NoPktEntryForm({
         </div>
       )}
 
-      {results && submittedCount === null && (
+      {actionError && (
+        <div className="card bg-ruby-light border-ruby/30 p-5 mb-4">
+          <p className="text-ruby">{actionError}</p>
+        </div>
+      )}
+
+      {results && submittedCount === null && errorCount > 0 && (
         <div className="card bg-ruby-light border-ruby/30 p-5">
-          <p className="text-ruby">Fix the flagged rows above and check again — nothing was saved yet.</p>
+          <p className="text-ruby">Fix the flagged rows above, then Check again or Submit — nothing was saved.</p>
+        </div>
+      )}
+
+      {results && submittedCount === null && errorCount === 0 && results.length > 0 && (
+        <div className="card bg-emerald-light border-emerald/30 p-5">
+          <p className="text-emerald">All {results.length} entries passed the check — click Submit to save them.</p>
         </div>
       )}
     </div>

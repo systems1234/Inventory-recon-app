@@ -28,11 +28,23 @@ function csvField(value: string): string {
   return value;
 }
 
+/** dd-mm-yyyy hh:mm:ss in the viewer's local time, for CSV exports. Non-dates are returned untouched. */
+export function formatExportDateTime(val: unknown): string {
+  const raw = unwrap(val);
+  if (raw === "") return "";
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 /** Downloads `rows` as a CSV file, using `columns` (key, label) for header + order. */
 export function downloadCsv(filename: string, columns: { key: string; label: string }[], rows: Record<string, unknown>[]) {
   const lines = [
     columns.map((c) => csvField(c.label)).join(","),
-    ...rows.map((row) => columns.map((c) => csvField(unwrap(row[c.key]))).join(","))
+    ...rows.map((row) =>
+      columns.map((c) => csvField(c.key === "submitted_at" ? formatExportDateTime(row[c.key]) : unwrap(row[c.key]))).join(",")
+    )
   ];
   const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
