@@ -1,26 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { v4 as uuid } from "uuid";
-import { authOptions } from "@/lib/auth";
-import { canChangeLocation } from "@/lib/roles";
+import { requireEditAccess } from "@/lib/editAccess";
 import { changeLocation, recentChanges, LocationChangeError } from "@/lib/locationChange";
 
 export const dynamic = "force-dynamic";
 
-async function authorize() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return { error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }) };
-  }
-  const role = (session.user as any).role as string | undefined;
-  if (!canChangeLocation(role)) {
-    return { error: NextResponse.json({ error: "You don't have access to change locations" }, { status: 403 }) };
-  }
-  return { email: session.user.email };
-}
-
 export async function GET() {
-  const auth = await authorize();
+  const auth = await requireEditAccess();
   if (auth.error) return auth.error;
   try {
     return NextResponse.json({ changes: await recentChanges() });
@@ -30,7 +16,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await authorize();
+  const auth = await requireEditAccess();
   if (auth.error) return auth.error;
 
   const body = (await req.json().catch(() => null)) as { entry_number?: string; location?: string } | null;
@@ -41,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { oldLocation } = await changeLocation(entryNumber, location, auth.email!, uuid());
+    const { oldLocation } = await changeLocation(entryNumber, location, auth.email, uuid());
     return NextResponse.json({ ok: true, entry_number: entryNumber, old_location: oldLocation, new_location: location });
   } catch (err) {
     if (err instanceof LocationChangeError) {

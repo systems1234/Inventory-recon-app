@@ -146,12 +146,12 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
         })}
         {canChangeLocation(role) && (
           <Link
-            href="/change-location"
+            href="/edit-entries"
             onClick={onCloseMobile}
-            className={`nav-item ${pathname === "/change-location" ? "active" : ""}`}
+            className={`nav-item ${pathname === "/edit-entries" ? "active" : ""}`}
           >
             {icon.changeLocation}
-            <span className="label-text">Change Location</span>
+            <span className="label-text">Edit Entries</span>
           </Link>
         )}
         {isAdmin && (
