@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getBigQuery, table, currentReconMonth } from "@/lib/bigquery";
+import { getBigQuery, table, currentReconMonth, employeeTable, finalInventoryMasterTable } from "@/lib/bigquery";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -14,36 +16,78 @@ export async function GET(req: NextRequest) {
   const requestedMonth = req.nextUrl.searchParams.get("month");
   const reconMonth = requestedMonth && /^\d{4}-\d{2}-01$/.test(requestedMonth) ? requestedMonth : currentReconMonth();
 
-  const query = `
-    SELECT
-      u.user_id,
-      u.name,
-      IFNULL(n.normal_count, 0) AS normal_count,
-      IFNULL(l.lot_count, 0) AS lot_count,
-      IFNULL(p.no_pkt_count, 0) AS no_pkt_count
-    FROM ${table("users")} u
-    LEFT JOIN (
-      SELECT submitted_by, COUNT(*) AS normal_count
-      FROM ${table("normal_entries")}
-      WHERE recon_month = @reconMonth
-      GROUP BY submitted_by
-    ) n ON n.submitted_by = u.user_id
-    LEFT JOIN (
-      SELECT submitted_by, COUNT(*) AS lot_count
-      FROM ${table("lot_entries")}
-      WHERE recon_month = @reconMonth
-      GROUP BY submitted_by
-    ) l ON l.submitted_by = u.user_id
-    LEFT JOIN (
-      SELECT submitted_by, COUNT(*) AS no_pkt_count
-      FROM ${table("no_pkt_entries")}
-      WHERE recon_month = @reconMonth
-      GROUP BY submitted_by
-    ) p ON p.submitted_by = u.user_id
-    WHERE u.active = TRUE
-    ORDER BY u.name
+  // Only people who actually submitted something this month -- the users
+  // table also holds admins/managers who never do reconciliation.
+  const membersQuery = `
+    WITH submissions AS (
+      SELECT LOWER(submitted_by) AS email, 'normal' AS kind FROM ${table("normal_entries")} WHERE recon_month = @reconMonth
+      UNION ALL
+      SELECT LOWER(submitted_by), 'lot' FROM ${table("lot_entries")} WHERE recon_month = @reconMonth
+      UNION ALL
+      SELECT LOWER(submitted_by), 'no_pkt' FROM ${table("no_pkt_entries")} WHERE recon_month = @reconMonth
+    ),
+    counts AS (
+      SELECT email,
+             COUNTIF(kind = 'normal') AS normal_count,
+             COUNTIF(kind = 'lot') AS lot_count,
+             COUNTIF(kind = 'no_pkt') AS no_pkt_count
+      FROM submissions
+      GROUP BY email
+    )
+    SELECT c.email AS user_id,
+           COALESCE(ANY_VALUE(e.display_name), ANY_VALUE(u.name), c.email) AS name,
+           c.normal_count, c.lot_count, c.no_pkt_count
+    FROM counts c
+    LEFT JOIN ${employeeTable()} e ON LOWER(e.work_email) = c.email
+    LEFT JOIN ${table("users")} u ON LOWER(u.user_id) = c.email
+    GROUP BY c.email, c.normal_count, c.lot_count, c.no_pkt_count
+    ORDER BY c.normal_count + c.lot_count + c.no_pkt_count DESC
   `;
-  const [rows] = await bq.query({ query, params: { reconMonth } });
 
-  return NextResponse.json({ reconMonth, members: rows });
+  // Same universe as the "IMS Instock - Loose, but missed in Recon" view:
+  // Instock - Loose items that existed in IMS by the last scan date of the
+  // month (anything added after that couldn't have been scanned yet).
+  const coverageQuery = `
+    WITH recon AS (
+      SELECT DISTINCT TRIM(CAST(entry_number AS STRING)) AS id
+      FROM (
+        SELECT entry_number FROM ${table("normal_entries")} WHERE recon_month = @reconMonth
+        UNION ALL
+        SELECT entry_number FROM ${table("no_pkt_entries")} WHERE recon_month = @reconMonth
+      )
+    ),
+    cutoff AS (
+      SELECT MAX(DATE(submitted_at)) AS d
+      FROM (
+        SELECT submitted_at FROM ${table("normal_entries")} WHERE recon_month = @reconMonth
+        UNION ALL
+        SELECT submitted_at FROM ${table("no_pkt_entries")} WHERE recon_month = @reconMonth
+      )
+    ),
+    loose AS (
+      SELECT TRIM(CAST(i.Int_mas_Inventory_ID AS STRING)) AS id,
+             IFNULL(i.Final_Formula_Based_Price, 0) AS price
+      FROM ${finalInventoryMasterTable()} i
+      CROSS JOIN cutoff c
+      WHERE UPPER(REGEXP_REPLACE(TRIM(i.Final_Inventory_Status), r'\\s+', ' ')) = 'INSTOCK - LOOSE'
+        AND DATE(i.Int_mas_Timestamp) <= c.d
+    )
+    SELECT
+      COUNT(*) AS total_items,
+      COUNTIF(r.id IS NOT NULL) AS verified_items,
+      CAST(IFNULL(SUM(l.price), 0) AS FLOAT64) AS total_value,
+      CAST(IFNULL(SUM(IF(r.id IS NULL, l.price, 0)), 0) AS FLOAT64) AS unverified_value
+    FROM loose l
+    LEFT JOIN recon r ON r.id = l.id
+  `;
+
+  try {
+    const [[members], [coverageRows]] = await Promise.all([
+      bq.query({ query: membersQuery, params: { reconMonth } }),
+      bq.query({ query: coverageQuery, params: { reconMonth } })
+    ]);
+    return NextResponse.json({ reconMonth, members, coverage: coverageRows[0] ?? null });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
+  }
 }

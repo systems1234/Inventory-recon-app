@@ -76,6 +76,15 @@ export function inventoryMasterTable(): string {
 }
 
 /**
+ * IMS_New_Version.Final_Inventory_Master -- carries Final_Inventory_Status and
+ * Final_Formula_Based_Price, which the coverage report needs. Overridable via
+ * FINAL_INVENTORY_MASTER_ID, defaults to the production table.
+ */
+export function finalInventoryMasterTable(): string {
+  return `\`${process.env.FINAL_INVENTORY_MASTER_ID || "mis-gempundit.IMS_New_Version.Final_Inventory_Master"}\``;
+}
+
+/**
  * HR's own employee directory (gempundit_db.employee) -- sign-in access is
  * gated on a row here whose Project_id column lists "inventory_recon",
  * instead of a separate allow-list this app owns.
