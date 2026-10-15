@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
         </div>
       )}
       <p style={{ fontSize: 11.5, color: "var(--g-500)", marginBottom: 24 }}>
-        Based on IMS &quot;Instock - Loose&quot; inventory added up to the last scan date this month, matched against For Entry and
+        Based on IMS &quot;Instock - Loose&quot; inventory added up to the 5th of the month, matched against For Entry and
         No Pkt No. entries. Value uses Final_Formula_Based_Price.
       </p>
 

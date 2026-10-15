@@ -45,8 +45,7 @@ export async function GET(req: NextRequest) {
   `;
 
   // Same universe as the "IMS Instock - Loose, but missed in Recon" view:
-  // Instock - Loose items that existed in IMS by the last scan date of the
-  // month (anything added after that couldn't have been scanned yet).
+  // Instock - Loose items that existed in IMS by the 5th of the month.
   const coverageQuery = `
     WITH recon AS (
       SELECT DISTINCT TRIM(CAST(entry_number AS STRING)) AS id
@@ -57,12 +56,9 @@ export async function GET(req: NextRequest) {
       )
     ),
     cutoff AS (
-      SELECT MAX(DATE(submitted_at)) AS d
-      FROM (
-        SELECT submitted_at FROM ${table("normal_entries")} WHERE recon_month = @reconMonth
-        UNION ALL
-        SELECT submitted_at FROM ${table("no_pkt_entries")} WHERE recon_month = @reconMonth
-      )
+      -- Recon covers IMS stock as it stood on the 5th of the month; later IMS
+      -- additions (and scans made afterwards to solve cases) don't move it.
+      SELECT DATE_ADD(CAST(@reconMonth AS DATE), INTERVAL 4 DAY) AS d
     ),
     loose AS (
       SELECT TRIM(CAST(i.Int_mas_Inventory_ID AS STRING)) AS id,
